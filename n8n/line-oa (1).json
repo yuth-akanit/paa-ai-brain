@@ -672,17 +672,17 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $json;\nconst aiText = body?.content?.[0]?.text?.trim() || '';\n\n// If AI said HANDOFF or empty → handoff flag\nconst needsHandoff = !aiText || aiText === 'HANDOFF' || aiText.toUpperCase().startsWith('HANDOFF');\n\nreturn [{ json: { ...$('Is Question?').first().json, aiText, needsHandoff } }];"
+        "jsCode": "const body = $json || {};\nconst orig = $('Normalize cmd1').item.json;\nconst aiText = String(body.customer_reply || '').trim();\nconst hasReply = body.ok === true && body.recommended_action === 'reply_customer' && !!aiText;\n\nreturn [{ json: { ...orig, brain_response: body, aiText, hasReply } }];"
       },
       "id": "9ec44e94-6794-4cd1-9f23-efdd83f0864a",
-      "name": "Parse AI Response",
+      "name": "Normalize paa-ai-brain1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         12880,
         10704
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -695,8 +695,8 @@
           },
           "conditions": [
             {
-              "id": "is-handoff",
-              "leftValue": "={{ $json.needsHandoff }}",
+              "id": "has-brain-reply-1",
+              "leftValue": "={{ $json.hasReply === true }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -709,14 +709,14 @@
         "options": {}
       },
       "id": "00baacd1-64d8-4b05-a5a0-92e7c6f0f169",
-      "name": "Need Handoff?",
+      "name": "Has reply?1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
         13104,
         10704
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -730,7 +730,7 @@
         13328,
         10752
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -764,7 +764,7 @@
         13552,
         10752
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -802,7 +802,7 @@
           "name": "PAA Air Service"
         }
       },
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -840,7 +840,7 @@
           "name": "P&A Air Service"
         }
       },
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -1436,21 +1436,23 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "url": "={{ (($env.APP_BASE_URL || 'https://admin.paaair.online') + '').replace(/\\/$/, '') + '/api/ai/respond' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "x-ai-gateway-key",
+              "value": "={{ $env.AI_GATEWAY_INTERNAL_KEY }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { model: 'gpt-4o-mini', max_tokens: 300, temperature: 0.5, messages: [{ role: 'system', content: 'คุณคือผู้ช่วยตอบคำถามธุรกิจ PAA Air / P&A Air ให้บริการล้างแอร์ติดผนัง ตอบภาษาไทย สั้น กระชับ เป็นมิตร ห้ามใช้ markdown\\n\\nข้อมูลธุรกิจ:\\n- ราคาล้างแอร์ติดผนัง: 9,000 BTU = 700 บาท, 12,000-13,000 BTU = 800 บาท, 18,000 BTU = 900 บาท, 24,000 BTU = 1,000 บาท\\n- บริการเสริม: น้ำยาฆ่าเชื้อ (ล้างคอยล์) +100 บาท, ระบบ Inverter +100 บาท\\n- รับประกันน้ำหยดหลังล้าง 30 วัน\\n- จองคิวออนไลน์: https://liff.line.me/2008445752-IZ9iXrPC\\n\\nกฎสำคัญ: ถ้าคำถามไม่เกี่ยวกับธุรกิจ หรือตอบไม่ได้ หรือต้องการข้อมูลเพิ่มเติมจากแอดมิน ให้ตอบว่า HANDOFF เพียงคำเดียวเท่านั้น ห้ามตอบอื่น' }, { role: 'user', content: $json.text }] } }}",
+        "jsonBody": "={{ {\n  channel: 'line',\n  channelUserId: $json.line_user_id,\n  threadId: null,\n  customerMessage: String($json.text || ''),\n  sourceEvent: {\n    replyToken: $json.reply_token,\n    messageId: $json.raw_event?.message?.id || null,\n    messageType: $json.raw_event?.message?.type || 'text',\n    timestamp: $json.ts || null\n  },\n  runtime: {\n    requestId: 'n8n_line2_' + Date.now() + '_' + $execution.id,\n    receivedAt: new Date().toISOString(),\n    mode: 'line_text_inbound'\n  }\n} }}",
         "options": {
           "response": {
             "response": {
@@ -1461,20 +1463,14 @@
         }
       },
       "id": "78aca5f9-320f-4280-a6e1-0157f66d2162",
-      "name": "Call OpenAI GPT",
+      "name": "Call paa-ai-brain2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
         12880,
         11680
       ],
-      "credentials": {
-        "openAiApi": {
-          "id": "D7ElO5P4s9xjtGRb",
-          "name": "Admin API"
-        }
-      },
-      "disabled": true,
+      "disabled": false,
       "onError": "continueRegularOutput"
     },
     {
@@ -1488,8 +1484,8 @@
           },
           "conditions": [
             {
-              "id": "check-ai-answer",
-              "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && String($json.choices[0].message.content || '').trim()) && String($json.choices[0].message.content).trim().toUpperCase() !== 'HANDOFF' }}",
+              "id": "has-brain-reply-2",
+              "leftValue": "={{ $json.ok === true && $json.recommended_action === 'reply_customer' && !!String($json.customer_reply || '').trim() }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true"
@@ -1503,14 +1499,14 @@
         }
       },
       "id": "f84e58db-76c9-415a-b5b0-d167d4d367ce",
-      "name": "AI Can Answer?",
+      "name": "Has reply?2",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
         13104,
         11680
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -1929,7 +1925,7 @@
         13552,
         11392
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -1967,7 +1963,7 @@
           "name": "PAA Air Service"
         }
       },
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -2005,7 +2001,7 @@
           "name": "P&A Air Service"
         }
       },
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -2105,7 +2101,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get AI response text\nconst aiText = String($json.choices?.[0]?.message?.content || '').trim();\n\n// Retrieve original LINE event context via item linking\nconst orig = $('Normalize cmd2').item.json;\nconst replyToken = String(orig.reply_token || '').trim();\n\nconst replyPayload = replyToken\n  ? { replyToken, messages: [{ type: 'text', text: aiText }] }\n  : null;\n\nreturn [{ json: {\n  ...orig,\n  replyPayload,\n  pushPayload: null,\n} }];"
+        "jsCode": "const aiText = String($json.customer_reply || '').trim();\nconst orig = $('Normalize cmd2').item.json;\nconst replyToken = String(orig.reply_token || '').trim();\n\nconst replyPayload = replyToken && aiText\n  ? { replyToken, messages: [{ type: 'text', text: aiText }] }\n  : null;\n\nreturn [{ json: {\n  ...orig,\n  brain_response: $json,\n  replyPayload,\n  pushPayload: null,\n} }];"
       },
       "id": "daf34cc8-1616-4dcb-855e-4cbbd68e9cb4",
       "name": "Build AI Reply Payload1",
@@ -2115,26 +2111,28 @@
         13328,
         11824
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "url": "={{ (($env.APP_BASE_URL || 'https://admin.paaair.online') + '').replace(/\\/$/, '') + '/api/ai/respond' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "x-ai-gateway-key",
+              "value": "={{ $env.AI_GATEWAY_INTERNAL_KEY }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { model: 'gpt-4o-mini', max_tokens: 300, temperature: 0.5, messages: [{ role: 'system', content: 'คุณคือผู้ช่วยตอบคำถามธุรกิจ PAA Air / P&A Air ให้บริการล้างแอร์ติดผนัง ตอบภาษาไทย สั้น กระชับ เป็นมิตร ห้ามใช้ markdown\\n\\nข้อมูลธุรกิจ:\\n- ราคาล้างแอร์ติดผนัง: 9,000 BTU = 700 บาท, 12,000-13,000 BTU = 800 บาท, 18,000 BTU = 900 บาท, 24,000 BTU = 1,000 บาท\\n- บริการเสริม: น้ำยาฆ่าเชื้อ (ล้างคอยล์) +100 บาท, ระบบ Inverter +100 บาท\\n- รับประกันน้ำหยดหลังล้าง 30 วัน\\n- จองคิวออนไลน์: https://liff.line.me/2008445752-IZ9iXrPC\\n\\nกฎสำคัญ: ถ้าคำถามไม่เกี่ยวกับธุรกิจ หรือตอบไม่ได้ หรือต้องการข้อมูลเพิ่มเติมจากแอดมิน ให้ตอบว่า HANDOFF เพียงคำเดียวเท่านั้น ห้ามตอบอื่น' }, { role: 'user', content: $json.text }] } }}",
+        "jsonBody": "={{ {\n  channel: 'line',\n  channelUserId: $json.line_user_id,\n  threadId: null,\n  customerMessage: String($json.text || ''),\n  sourceEvent: {\n    replyToken: $json.reply_token,\n    messageId: $json.raw_event?.message?.id || null,\n    messageType: $json.raw_event?.message?.type || 'text',\n    timestamp: $json.ts || null\n  },\n  runtime: {\n    requestId: 'n8n_line_main_' + Date.now() + '_' + $execution.id,\n    receivedAt: new Date().toISOString(),\n    mode: 'line_text_inbound'\n  }\n} }}",
         "options": {
           "response": {
             "response": {
@@ -2145,20 +2143,14 @@
         }
       },
       "id": "7ef32567-02d2-4b8f-ac59-c05124de23ce",
-      "name": "Call OpenAI GPT1",
+      "name": "Call paa-ai-brain1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
         12656,
         10704
       ],
-      "credentials": {
-        "openAiApi": {
-          "id": "D7ElO5P4s9xjtGRb",
-          "name": "Admin API"
-        }
-      },
-      "disabled": true,
+      "disabled": false,
       "onError": "continueRegularOutput"
     }
   ],
@@ -2444,36 +2436,7 @@
       "main": [
         [
           {
-            "node": "Call OpenAI GPT1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Build Unified Inbox Payload (Plain Text)1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse AI Response": {
-      "main": [
-        [
-          {
-            "node": "Need Handoff?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Need Handoff?": {
-      "main": [
-        [
-          {
-            "node": "Build AI Reply Payload",
+            "node": "Call paa-ai-brain1",
             "type": "main",
             "index": 0
           }
@@ -2560,7 +2523,7 @@
         ],
         [
           {
-            "node": "Detect Question?",
+            "node": "Call paa-ai-brain1",
             "type": "main",
             "index": 0
           }
@@ -2751,35 +2714,6 @@
         ]
       ]
     },
-    "Call OpenAI GPT": {
-      "main": [
-        [
-          {
-            "node": "AI Can Answer?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Can Answer?": {
-      "main": [
-        [
-          {
-            "node": "Build AI Reply Payload1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Build Unified Inbox Payload (Plain Text)2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Normalize cmd2": {
       "main": [
         [
@@ -2802,7 +2736,7 @@
         ],
         [
           {
-            "node": "Call OpenAI GPT",
+            "node": "Call paa-ai-brain2",
             "type": "main",
             "index": 0
           }
@@ -3004,11 +2938,69 @@
         ]
       ]
     },
-    "Call OpenAI GPT1": {
+    "Normalize paa-ai-brain1": {
       "main": [
         [
           {
-            "node": "Parse AI Response",
+            "node": "Has reply?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has reply?1": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call paa-ai-brain2": {
+      "main": [
+        [
+          {
+            "node": "Has reply?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has reply?2": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call paa-ai-brain1": {
+      "main": [
+        [
+          {
+            "node": "Normalize paa-ai-brain1",
             "type": "main",
             "index": 0
           }

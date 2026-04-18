@@ -15,7 +15,7 @@ import {
 } from "../db/queries";
 import { searchKnowledge } from "../knowledge/search";
 import { requestAdminHandoff } from "./handoff";
-import type { CaseSummaryPayload, ExtractedCaseFields, ServiceType } from "../types";
+import type { CaseSummaryPayload, ExtractedCaseFields, IntentName, ServiceType } from "../types";
 import { isMeaningful, joinMeaningful } from "../utils";
 
 function mergeFields(current: ExtractedCaseFields, next: ExtractedCaseFields): ExtractedCaseFields {
@@ -64,6 +64,102 @@ function determineLeadStatus(missingFields: string[], shouldHandoff: boolean) {
   return "collecting_info" as const;
 }
 
+const ACTIVE_SERVICE_INTENTS = new Set<IntentName>([
+  "cleaning_request",
+  "repair_request",
+  "inspection_request",
+  "relocation_request",
+  "installation_request",
+  "scheduling_request"
+]);
+
+const STRUCTURED_FOLLOWUP_FIELDS: Array<keyof ExtractedCaseFields> = [
+  "customer_name",
+  "phone",
+  "area",
+  "address",
+  "machine_count",
+  "preferred_date",
+  "preferred_time"
+];
+
+function normalizeDigits(text: string) {
+  return text.replace(/\D/g, "");
+}
+
+function looksLikeStructuredFollowUp(messageText: string, extractedFields: ExtractedCaseFields) {
+  const text = messageText.trim();
+  const lower = text.toLowerCase();
+  const digits = normalizeDigits(text);
+
+  const asksContactInfo =
+    lower.includes("ติดต่อ") ||
+    lower.includes("เบอร์ร้าน") ||
+    lower.includes("line id") ||
+    lower.includes("สำนักงานใหญ่") ||
+    lower.includes("สาขา") ||
+    lower.includes("email");
+
+  const startsNewIntent =
+    lower.includes("ราคา") ||
+    lower.includes("เท่าไหร่") ||
+    lower.includes("ล้างแอร์") ||
+    lower.includes("ซ่อม") ||
+    lower.includes("ย้ายแอร์") ||
+    lower.includes("ติดตั้ง") ||
+    lower.includes("แอดมิน") ||
+    lower.includes("ขอบคุณ") ||
+    lower.includes("สวัสดี");
+
+  if (asksContactInfo || startsNewIntent) {
+    return false;
+  }
+
+  if (extractedFields.phone && digits.length >= 9 && digits.length <= 10) {
+    return true;
+  }
+
+  return STRUCTURED_FOLLOWUP_FIELDS.some((field) => {
+    const value = extractedFields[field];
+    return typeof value === "string" ? value.trim().length > 0 : typeof value === "number";
+  });
+}
+
+function resolveIntentWithCaseContext(args: {
+  existingCase: Awaited<ReturnType<typeof getServiceCaseById>>;
+  classifiedIntent: IntentName;
+  messageText: string;
+  extractedFields: ExtractedCaseFields;
+}) {
+  const previousIntent = args.existingCase?.ai_intent as IntentName | undefined;
+  const missingFields = Array.isArray(args.existingCase?.missing_fields) ? args.existingCase.missing_fields : [];
+  const weakFollowUpIntent =
+    args.classifiedIntent === "faq_contact" ||
+    args.classifiedIntent === "general_inquiry" ||
+    args.classifiedIntent === "greeting" ||
+    args.classifiedIntent === "closing";
+
+  const fillsMissingStructuredField = missingFields.some((field) => {
+    if (!STRUCTURED_FOLLOWUP_FIELDS.includes(field as keyof ExtractedCaseFields)) {
+      return false;
+    }
+    const value = args.extractedFields[field as keyof ExtractedCaseFields];
+    return typeof value === "string" ? value.trim().length > 0 : typeof value === "number";
+  });
+
+  if (
+    previousIntent &&
+    ACTIVE_SERVICE_INTENTS.has(previousIntent) &&
+    weakFollowUpIntent &&
+    fillsMissingStructuredField &&
+    looksLikeStructuredFollowUp(args.messageText, args.extractedFields)
+  ) {
+    return previousIntent;
+  }
+
+  return args.classifiedIntent;
+}
+
 export async function processCustomerMessage(params: {
   threadId: string;
   caseId: string;
@@ -97,12 +193,20 @@ export async function processCustomerMessage(params: {
   const currentCaseFields = (existingCase.extracted_fields as ExtractedCaseFields | null) ?? {};
 
   // Parallelize logic
-  const [extractedFields, { intent, confidence }, knowledge, priceFacts] = await Promise.all([
+  const [extractedFields, classified, knowledge, priceFacts] = await Promise.all([
     extractStructuredFields(params.messageText, currentCaseFields, params.imageBase64),
     classifyIntent(params.messageText, params.imageBase64),
     searchKnowledge(params.messageText),
     listPricingFacts()
   ]);
+
+  const intent = resolveIntentWithCaseContext({
+    existingCase,
+    classifiedIntent: classified.intent,
+    messageText: params.messageText,
+    extractedFields
+  });
+  const confidence = intent === classified.intent ? classified.confidence : Math.max(classified.confidence, 0.92);
 
   const summaryText = recentMessages
     .slice(-8)

@@ -1,0 +1,385 @@
+{
+  "name": "admin_runtime_handoff_line_alert",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const h = $json.normalized_handoff || {};\nconst extracted = h.extracted_fields || {};\nconst parts = [\n  '🚨 AI Handoff ใหม่',\n  `Req: ${h.request_id ?? '-'}`,\n  `Intent: ${h.intent ?? 'unknown'}`,\n  `Reason: ${h.reason ?? 'handoff_required'}`,\n  `ลูกค้า: ${h.customer_message ?? '-'}`,\n  `สรุป: ${h.summary ?? '-'}`,\n  `Next: ${h.recommended_next_action ?? 'admin_review_customer_message'}`\n];\n\nif (extracted.service_type) parts.push(`Service: ${extracted.service_type}`);\nif (extracted.area) parts.push(`พื้นที่: ${extracted.area}`);\nif (typeof extracted.machine_count !== 'undefined') parts.push(`จำนวนเครื่อง: ${extracted.machine_count}`);\nif (extracted.preferred_date || extracted.preferred_date_text) parts.push(`วัน/เวลา: ${extracted.preferred_date ?? extracted.preferred_date_text}`);\n\nconst messageText = parts.join('\\n');\n\nreturn [{\n  json: {\n    request_id: h.request_id ?? null,\n    flow: 'admin_runtime_handoff',\n    stage: 'formatted',\n    normalized_handoff: h,\n    admin_line_destination: 'U58a57bb40803980514411bfc0c9757e1',\n    admin_line_token: 'x3JBX9/LH2ZybO0CVEItgbePON9CqZqJWAp4ZJTmrCp7VfEezHDWwMxrUIIp4sK8JOT2BKSHfxGC9R9d7wfRowRzr5UzdRf9K+qjSMZRqiD0I5WtqSNAsohgizjKhYYvRSpPkskZIWj60jX3M/syfQdB04t89/1O/w1cDnyilFU=',\n    admin_line_text: messageText\n  }\n}];"
+      },
+      "id": "f1432814-a62c-44ca-a749-9b86e92e3653",
+      "name": "format_admin_line_text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const h = $json.normalized_handoff || {};\nconst extracted = h.extracted_fields || {};\n\nfunction mapReason(reason) {\n  switch (reason) {\n    case 'HUMAN_OWNED_BLOCK':\n      return 'ลูกค้ากำลังคุยกับแอดมินอยู่ ระบบจึงไม่ตอบอัตโนมัติ';\n    case 'handoff_required':\n      return 'AI ขอส่งต่อให้แอดมินตรวจสอบ';\n    case 'unknown_intent':\n      return 'AI ยังตีความเจตนาของลูกค้าไม่ชัด';\n    default:\n      return 'ต้องให้แอดมินตรวจสอบข้อความนี้';\n  }\n}\n\nfunction buildExtractedLines(extracted) {\n  const lines = [];\n\n  if (extracted.service_type) {\n    lines.push(`- บริการ: ${extracted.service_type}`);\n  }\n\n  if (typeof extracted.machine_count !== 'undefined' && extracted.machine_count !== null) {\n    lines.push(`- จำนวนเครื่อง: ${extracted.machine_count}`);\n  }\n\n  if (extracted.area) {\n    lines.push(`- พื้นที่: ${extracted.area}`);\n  }\n\n  if (extracted.preferred_date || extracted.preferred_date_text) {\n    lines.push(`- วัน/เวลา: ${extracted.preferred_date ?? extracted.preferred_date_text}`);\n  }\n\n  return lines;\n}\n\nfunction buildRecommendedActions(extracted) {\n  const actions = [];\n\n  if (!extracted.service_type) {\n    actions.push('- ถามประเภทบริการที่ลูกค้าต้องการ');\n  }\n\n  if (typeof extracted.machine_count === 'undefined' || extracted.machine_count === null) {\n    actions.push('- ถามจำนวนเครื่อง');\n  }\n\n  if (!extracted.area) {\n    actions.push('- ถามพื้นที่/เขตหน้างาน');\n  }\n\n  if (!extracted.preferred_date && !extracted.preferred_date_text) {\n    actions.push('- ถามวันและเวลาที่ลูกค้าสะดวก');\n  }\n\n  if (actions.length === 0) {\n    actions.push('- ยืนยันรายละเอียดงานกับลูกค้า');\n    actions.push('- เสนอคิวว่างหรือขั้นตอนถัดไป');\n  }\n\n  return actions;\n}\n\nconst reasonText = mapReason(h.reason);\nconst customerMessage = (h.customer_message || '-').trim();\nconst extractedLines = buildExtractedLines(extracted);\nconst actionLines = buildRecommendedActions(extracted);\n\nconst parts = [\n  '🚨 มีเคสให้แอดมินรับช่วง',\n  '',\n  `เหตุผล: ${reasonText}`,\n  '',\n  'ข้อความลูกค้า:',\n  `\"${customerMessage}\"`,\n  '',\n  'ข้อมูลที่จับได้:',\n  ...(extractedLines.length ? extractedLines : ['- ยังไม่พบรายละเอียดงานชัดเจน']),\n  '',\n  'แนะนำให้ตอบ:',\n  ...actionLines,\n];\n\nif (h.request_id) {\n  parts.push('', `#Ref: ${h.request_id}`);\n}\n\nconst messageText = parts.join('\\n');\n\nconst adminPushPayload = {\n  to: $json.admin_line_destination || 'U58a57bb40803980514411bfc0c9757e1',\n  messages: [\n    {\n      type: 'text',\n      text: messageText.slice(0, 5000)\n    }\n  ]\n};\n\nreturn [\n  {\n    json: {\n      request_id: h.request_id ?? null,\n      flow: 'admin_runtime_handoff',\n      stage: 'formatted',\n      normalized_handoff: h,\n      admin_line_destination: adminPushPayload.to,\n      admin_line_text: messageText,\n      admin_push_payload: adminPushPayload\n    }\n  }\n];"
+      },
+      "id": "395d0021-b0ff-44e9-a73d-f012b1333062",
+      "name": "build_line_push_payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.admin_push_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 8000
+        }
+      },
+      "id": "1d5b042a-ff9f-433d-ac25-19528606d6c5",
+      "name": "push_line_to_admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        736,
+        848
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $('build_line_push_payload').first()?.json ?? {};\nconst pushRes = $json ?? {};\nconst h = src.normalized_handoff || {};\n\nreturn [{\n  json: {\n    ok: !(pushRes.error || pushRes.statusCode >= 400),\n    request_id: src.request_id ?? null,\n    flow: 'admin_runtime_handoff',\n    stage: 'accepted',\n    message: 'handoff received',\n    normalized_handoff: h,\n    admin_line_text: src.admin_line_text ?? '',\n    admin_push_result: pushRes\n  }\n}];"
+      },
+      "id": "6e4816d2-0659-479f-a6a1-b49146372255",
+      "name": "build_admin_push_result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin_runtime_handoff",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a872bf47-3639-4462-a591-8e64db2a05c6",
+      "name": "admin_runtime_handoff1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -704,
+        736
+      ],
+      "webhookId": "1c50f44c-a5ee-490c-ae72-570cd334e585"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst requestId = body?.request_id ?? `rt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nif (!body || typeof body !== 'object') {\n  return [{\n    json: {\n      ok: false,\n      request_id: requestId,\n      stage: 'extract_handoff_payload',\n      error_code: 'INVALID_HANDOFF_PAYLOAD',\n      message: 'Body is missing or invalid',\n      should_stop: true\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: requestId,\n    received_at: new Date().toISOString(),\n    raw_handoff: body\n  }\n}];"
+      },
+      "id": "f0557190-245e-4323-94a9-4d84cfd45607",
+      "name": "extract_handoff_payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ !!$json.raw_handoff.request_id }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "c3",
+              "leftValue": "={{ !!$json.raw_handoff.customer_message }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3eabe92d-89ee-4d77-8ac2-1589cf1908be",
+      "name": "has_valid_handoff_payload1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok: false,\n    request_id: $json.request_id ?? `rt_${Date.now()}`,\n    flow: 'admin_runtime_handoff',\n    stage: 'rejected',\n    error_code: $json.error_code ?? 'INVALID_HANDOFF_PAYLOAD',\n    message: 'handoff rejected',\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "838c4724-bdad-4f82-b774-5264feaf6711",
+      "name": "build_invalid_handoff_response1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const h = $json.raw_handoff || {};\nconst extracted = h.extracted_fields || {};\nconst missing = Array.isArray(h.missing_fields) ? h.missing_fields : [];\nconst normalized = {\n  request_id: h.request_id ?? $json.request_id,\n  source: h.source ?? 'line_runtime_integration_mvp',\n  channel: h.channel ?? 'line',\n  channel_user_id: h.channel_user_id ?? null,\n  message_id: h.message_id ?? null,\n  customer_message: h.customer_message ?? '',\n  intent: h.intent ?? 'unknown',\n  confidence: typeof h.confidence === 'number' ? h.confidence : 0,\n  reason: h.reason ?? 'handoff_required',\n  summary: h.summary ?? 'AI routed conversation to admin',\n  recommended_next_action: h.recommended_next_action ?? 'admin_review_customer_message',\n  extracted_fields: extracted,\n  missing_fields: missing,\n  received_at: h.received_at ?? $json.received_at ?? new Date().toISOString()\n};\n\nreturn [{\n  json: {\n    request_id: normalized.request_id,\n    flow: 'admin_runtime_handoff',\n    stage: 'normalized',\n    normalized_handoff: normalized\n  }\n}];"
+      },
+      "id": "21557fb3-e95d-46b5-a216-0eda98a900cf",
+      "name": "normalize_handoff_payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "4f36dc2b-4396-40e0-b5b9-1fc90e9642ea",
+      "name": "Respond Accepted1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "8f3915df-9daa-47d6-8bf6-d01c75319cf0",
+      "name": "Respond Rejected1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        544
+      ]
+    }
+  ],
+  "pinData": {
+    "admin_runtime_handoff1": [
+      {
+        "json": {
+          "headers": {
+            "host": "admin.paaair.online",
+            "user-agent": "axios/1.13.5",
+            "content-length": "256",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.21.0.1",
+            "x-forwarded-host": "admin.paaair.online",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "request_id": "rt_1776497721992",
+            "source": "v7_final_skip",
+            "customer_message": "ยุท",
+            "reason": "HUMAN_OWNED_BLOCK",
+            "summary": "AI silent (Handover Active) | Thread: 8463137a-99af-4de3-b3d4-889460e6406b",
+            "thread_id": "8463137a-99af-4de3-b3d4-889460e6406b"
+          },
+          "webhookUrl": "https://admin.paaair.online/webhook/admin_runtime_handoff",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "format_admin_line_text": {
+      "main": [
+        []
+      ]
+    },
+    "build_line_push_payload": {
+      "main": [
+        [
+          {
+            "node": "push_line_to_admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "push_line_to_admin": {
+      "main": [
+        [
+          {
+            "node": "build_admin_push_result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "build_admin_push_result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build_admin_push_result": {
+      "main": [
+        [
+          {
+            "node": "Respond Accepted1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "admin_runtime_handoff1": {
+      "main": [
+        [
+          {
+            "node": "extract_handoff_payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_handoff_payload1": {
+      "main": [
+        [
+          {
+            "node": "has_valid_handoff_payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "has_valid_handoff_payload1": {
+      "main": [
+        [
+          {
+            "node": "normalize_handoff_payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "build_invalid_handoff_response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build_invalid_handoff_response1": {
+      "main": [
+        [
+          {
+            "node": "Respond Rejected1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_handoff_payload1": {
+      "main": [
+        [
+          {
+            "node": "build_line_push_payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "e51066f0-84d1-42d0-a396-572c27f75199",
+  "meta": {
+    "instanceId": "50b9398667fecef5231b900714a0997b8e87996f58727cad5427170a677b0267"
+  },
+  "id": "n2zfbDr9fauYxbwW",
+  "tags": []
+}

@@ -100,6 +100,8 @@ export const adminKnowledgeSchema = z.object({
 export const aiRespondRequestSchema = z.object({
   channel: z.literal("line"),
   channelUserId: z.string().min(1),
+  channelPlatformId: z.string().optional().nullable(),
+  accountKey: z.string().optional().nullable(),
   threadId: z.string().uuid().optional().nullable(),
   customerMessage: z.string().optional().nullable(),
   sourceEvent: z.object({

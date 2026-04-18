@@ -1,4 +1,6 @@
 
+import { resolveLineAccessToken, type LineChannelContext } from "@/lib/line/token-resolver";
+
 export interface LineProfile {
   userId: string;
   displayName: string;
@@ -6,14 +8,18 @@ export interface LineProfile {
   statusMessage?: string;
 }
 
-export async function getLineProfile(userId: string): Promise<LineProfile | null> {
-  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+export async function getLineProfile(userId: string, context: LineChannelContext = {}): Promise<LineProfile | null> {
+  const resolved = resolveLineAccessToken(context);
+  const token = resolved.token;
   if (!token) {
-    console.error("[LINE-PROFILE] Missing LINE_CHANNEL_ACCESS_TOKEN");
+    console.error("[LINE-PROFILE] Missing LINE access token", context);
     return null;
   }
 
   try {
+    console.log(
+      `[LINE-PROFILE] Fetching profile userId=${userId} channel_platform_id=${context.channelPlatformId ?? "-"} account_key=${context.accountKey ?? "-"} token_source=${resolved.source}`
+    );
     const response = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -21,7 +27,9 @@ export async function getLineProfile(userId: string): Promise<LineProfile | null
     });
 
     if (!response.ok) {
-      console.error(`[LINE-PROFILE] Failed to fetch profile for ${userId}: ${response.status} ${response.statusText}`);
+      console.error(
+        `[LINE-PROFILE] Failed to fetch profile for ${userId}: ${response.status} ${response.statusText} channel_platform_id=${context.channelPlatformId ?? "-"} account_key=${context.accountKey ?? "-"} token_source=${resolved.source}`
+      );
       return null;
     }
 

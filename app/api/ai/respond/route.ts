@@ -49,22 +49,46 @@ export async function POST(request: Request) {
     // --- Persistence / Write Path ---
     console.log(`[AI-RESPOND] [${requestId}] starting_persistence t=${Date.now() - startedAt}ms`);
     
+    let resolvedDisplayName: string | null = null;
+    try {
+      const profile = await getLineProfile(inbound.channelUserId, {
+        channelPlatformId: inbound.channelPlatformId,
+        accountKey: inbound.accountKey
+      });
+      resolvedDisplayName = profile?.displayName?.trim() || null;
+    } catch (error) {
+      console.warn(`[AI-RESPOND] [${requestId}] profile_prefetch_failed t=${Date.now() - startedAt}ms`, error);
+    }
+
     // 1. Resolve Customer
     const customer = await findOrCreateCustomerByChannel({
       provider: "line",
-      externalUserId: inbound.channelUserId
+      externalUserId: inbound.channelUserId,
+      displayName: resolvedDisplayName
     });
 
-    // 1.1 Background Profile Enrichment
-    if (!customer.display_name || customer.display_name.startsWith("User_")) {
-      getLineProfile(inbound.channelUserId).then(profile => {
-        if (profile) {
-          updateCustomerProfile(customer.id, {
-            display_name: profile.displayName,
-            // image_url: profile.pictureUrl // Add this column to DB later if needed
-          }).catch(err => console.error("[PROFILE-RECOVER] failed to update", err));
+    // 1.1 Resolve a usable display name before summary/case generation.
+    if (resolvedDisplayName && customer.display_name !== resolvedDisplayName) {
+      await updateCustomerProfile(customer.id, {
+        display_name: resolvedDisplayName,
+      });
+      customer.display_name = resolvedDisplayName;
+    } else if (!customer.display_name || customer.display_name.startsWith("User_")) {
+      try {
+        const fallbackProfile = await getLineProfile(inbound.channelUserId, {
+          channelPlatformId: inbound.channelPlatformId,
+          accountKey: inbound.accountKey
+        });
+        const fallbackDisplayName = fallbackProfile?.displayName?.trim() || null;
+        if (fallbackDisplayName) {
+          await updateCustomerProfile(customer.id, {
+            display_name: fallbackDisplayName,
+          });
+          customer.display_name = fallbackDisplayName;
         }
-      }).catch(err => console.warn("[PROFILE-RECOVER] fetch failed", err));
+      } catch (error) {
+        console.warn(`[AI-RESPOND] [${requestId}] profile_recovery_failed t=${Date.now() - startedAt}ms`, error);
+      }
     }
     
     // 2. Resolve Thread
@@ -161,6 +185,22 @@ export async function POST(request: Request) {
 
     const processMs = Date.now() - processStartedAt;
     console.log(`[AI-RESPOND] [${requestId}] after_process process_ms=${processMs}ms total_ms=${Date.now() - startedAt}ms`);
+    console.log(
+      `[AI-RESPOND] [${requestId}] ai_result ${JSON.stringify({
+        channelUserId: inbound.channelUserId,
+        channelPlatformId: inbound.channelPlatformId ?? null,
+        accountKey: inbound.accountKey ?? null,
+        messageId: inbound.sourceEvent.messageId,
+        customerMessage,
+        intent: result.aiDecision.intent,
+        confidence: result.aiDecision.confidence,
+        should_handoff: result.aiDecision.should_handoff,
+        missing_fields: result.aiDecision.missing_fields,
+        extracted_fields: result.mergedFields,
+        customer_reply: finalClean(result.aiDecision.customer_reply),
+        summary: result.summary
+      })}`
+    );
 
     // The result from processCustomerMessage contains aiDecision which matches our required format
     let finalCustomerReply = result.aiDecision.customer_reply;
@@ -204,6 +244,15 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log(
+      `[AI-RESPOND] [${requestId}] outbound ${JSON.stringify({
+        intent: outboundChecked.data.intent,
+        recommended_action: outboundChecked.data.recommended_action,
+        should_handoff: outboundChecked.data.should_handoff,
+        missing_fields: outboundChecked.data.missing_fields,
+        customer_reply: outboundChecked.data.customer_reply
+      })}`
+    );
     console.log(`[AI-RESPOND] [${requestId}] return_ok action=${outboundChecked.data.recommended_action} total_ms=${Date.now() - startedAt}ms`);
     return NextResponse.json(outboundChecked.data, { status: 200 });
 
