@@ -102,7 +102,7 @@ export function CaseDetailView({
             <Info label="เบอร์โทร" value={customer?.phone || extracted.phone || "-"} />
             <Info label="พื้นที่" value={extracted.area || "-"} />
             <Info label="ประเภทงาน" value={serviceCase.service_type || extracted.service_type || "-"} />
-            <Info label="วันที่สะดวก" value={extracted.preferred_date || "-"} />
+            <Info label="วัน/เวลา" value={formatPreferredSchedule(extracted)} />
             <Info label="ระดับความเร่งด่วน" value={formatUrgency(extracted.urgency)} />
             <Info label="AI confidence" value={confidence !== null ? `${confidence}%` : "-"} />
           </div>
@@ -293,6 +293,15 @@ function renderChecklistSummary(extracted: Record<string, unknown>) {
   ].filter(Boolean);
 
   return collected.length > 0 ? collected.join(", ") : "ยังไม่มีข้อมูลสำคัญที่เก็บได้";
+}
+
+function formatPreferredSchedule(extracted: Record<string, unknown>) {
+  const date = typeof extracted.preferred_date === "string" ? extracted.preferred_date : "";
+  const time = typeof extracted.preferred_time === "string" ? extracted.preferred_time : "";
+  if (date && time) return `${date} ${time}`;
+  if (date) return date;
+  if (time) return time;
+  return "-";
 }
 
 function Info({ label, value }: { label: string; value: string }) {

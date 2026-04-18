@@ -15,6 +15,7 @@ import {
 } from "../db/queries";
 import { searchKnowledge } from "../knowledge/search";
 import { requestAdminHandoff } from "./handoff";
+import { normalizeScheduleFields } from "./schedule-normalizer";
 import type { CaseSummaryPayload, ExtractedCaseFields, IntentName, ServiceType } from "../types";
 import { isMeaningful, joinMeaningful } from "../utils";
 
@@ -193,12 +194,13 @@ export async function processCustomerMessage(params: {
   const currentCaseFields = (existingCase.extracted_fields as ExtractedCaseFields | null) ?? {};
 
   // Parallelize logic
-  const [extractedFields, classified, knowledge, priceFacts] = await Promise.all([
+  const [rawExtractedFields, classified, knowledge, priceFacts] = await Promise.all([
     extractStructuredFields(params.messageText, currentCaseFields, params.imageBase64),
     classifyIntent(params.messageText, params.imageBase64),
     searchKnowledge(params.messageText),
     listPricingFacts()
   ]);
+  const extractedFields = normalizeScheduleFields(rawExtractedFields, params.messageText);
 
   const intent = resolveIntentWithCaseContext({
     existingCase,
