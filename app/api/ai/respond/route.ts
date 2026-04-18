@@ -183,6 +183,30 @@ export async function POST(request: Request) {
     let imageBase64: string | null = null;
     let customerMessage = inbound.customerMessage || "";
 
+    // Sticker messages carry no text — treat as a closing acknowledgment so the bot
+    // does not mistake silence for a new conversation start (greeting response).
+    if (inbound.sourceEvent.messageType === "sticker") {
+      await createConversationMessage({
+        threadId: actualThreadId,
+        caseId: serviceCase.id,
+        role: "customer",
+        providerMessageId: inbound.sourceEvent.messageId,
+        messageText: "[sticker]"
+      });
+      return NextResponse.json({
+        ok: true,
+        intent: "closing",
+        confidence: 1.0,
+        should_handoff: false,
+        missing_fields: [],
+        extracted_fields: serviceCase.extracted_fields ?? {},
+        customer_reply: "",
+        recommended_action: "skip_reply",
+        admin_summary: null,
+        decision_meta: { reason: "sticker_closing" }
+      });
+    }
+
     if (inbound.sourceEvent.messageType === "image") {
       try {
         const { getMessageContent } = await import("@/lib/line/client");
