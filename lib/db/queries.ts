@@ -286,13 +286,27 @@ export async function updateThreadState(params: {
   lastCustomerMessageAt?: string;
   lastAssistantMessageAt?: string;
   summary?: string | null;
+  metadataPatch?: Record<string, unknown>;
 }) {
   const supabase = createServiceClient();
-  const { threadId, lastCustomerMessageAt, lastAssistantMessageAt, ...rest } = params;
-  
+  const { threadId, lastCustomerMessageAt, lastAssistantMessageAt, metadataPatch, ...rest } = params;
+
   const updateData: any = { ...compactObject(rest) };
   if (lastCustomerMessageAt) updateData.last_customer_message_at = lastCustomerMessageAt;
   if (lastAssistantMessageAt) updateData.last_assistant_message_at = lastAssistantMessageAt;
+
+  if (metadataPatch && Object.keys(metadataPatch).length > 0) {
+    const { data: existing, error: readError } = await supabase
+      .from("conversation_threads")
+      .select("metadata")
+      .eq("id", threadId)
+      .single();
+    if (readError) {
+      throw new Error(`Failed to read thread metadata: ${readError.message}`);
+    }
+    const prev = (existing?.metadata && typeof existing.metadata === "object") ? existing.metadata : {};
+    updateData.metadata = { ...prev, ...metadataPatch };
+  }
 
   const { error } = await supabase
     .from("conversation_threads")

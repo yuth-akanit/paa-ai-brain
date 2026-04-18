@@ -3,6 +3,7 @@ import Link from "next/link";
 import { IntentBadge } from "@/components/intent-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { cn, formatThaiDate } from "@/lib/utils";
+import { readSourceChannelDisplay } from "@/lib/line/channel-descriptor";
 
 type CaseRow = {
   id: string;
@@ -25,6 +26,9 @@ type CaseRow = {
   customers?: {
     display_name: string | null;
     phone: string | null;
+  } | null;
+  conversation_threads?: {
+    metadata?: Record<string, unknown> | null;
   } | null;
 };
 
@@ -81,6 +85,10 @@ function shouldShowProvidedName(item: CaseRow) {
   return Boolean(lineName && providedName && lineName !== providedName);
 }
 
+function getSourceChannel(item: CaseRow) {
+  return readSourceChannelDisplay(item.conversation_threads?.metadata);
+}
+
 /* ──────────────────────────────────────────────────────
    Mobile card for each case
    ────────────────────────────────────────────────────── */
@@ -102,6 +110,9 @@ function CaseCard({ item }: { item: CaseRow }) {
           <p className="mt-0.5 text-xs text-slate-400">
             {item.customers?.phone || "-"} · #{item.id.slice(0, 8)}
           </p>
+          {getSourceChannel(item) ? (
+            <p className="mt-0.5 text-xs text-slate-500">ช่องทาง: {getSourceChannel(item)}</p>
+          ) : null}
         </div>
         <p className="shrink-0 text-sm font-medium text-slate-700">
           {formatServiceType(item.service_type)}
@@ -194,6 +205,9 @@ export function CasesTable({ cases }: { cases: CaseRow[] }) {
                   ) : null}
                   <p className="mt-1 text-xs text-slate-500">{item.customers?.phone || "-"}</p>
                   <p className="mt-2 text-xs text-slate-400">#{item.id.slice(0, 8)}</p>
+                  {getSourceChannel(item) ? (
+                    <p className="mt-1 text-xs text-slate-500">ช่องทาง: {getSourceChannel(item)}</p>
+                  ) : null}
                 </td>
                 <td className="px-6 py-4 text-slate-700">
                   <div className="space-y-2">

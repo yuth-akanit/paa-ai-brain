@@ -3,6 +3,8 @@ import { IntentBadge } from "@/components/intent-badge";
 import { MockScenarioSwitcher } from "@/components/mock-scenario-switcher";
 import { StatusBadge } from "@/components/status-badge";
 import { formatThaiDate } from "@/lib/utils";
+import { isMockMode } from "@/lib/config/app-mode";
+import { readSourceChannelDisplay } from "@/lib/line/channel-descriptor";
 import type { DryRunScenario } from "@/lib/dry-run/scenario-catalog";
 import type { SimulateResult } from "@/lib/dry-run/simulate";
 
@@ -40,6 +42,9 @@ export function CaseDetailView({
   const providedName = extracted.customer_name || null;
   const primaryName = lineDisplayName || providedName || "ยังไม่ทราบชื่อลูกค้า";
   const showProvidedName = Boolean(lineDisplayName && providedName && lineDisplayName !== providedName);
+  const channelLabel =
+    readSourceChannelDisplay(thread?.metadata) ||
+    (isMockMode() ? "LINE OA / mock mode" : "LINE OA");
 
   // Helper to compare values and return a status badge
   const CompareStatus = ({ label, expected, actual }: { label: string; expected: any; actual: any }) => {
@@ -186,7 +191,7 @@ export function CaseDetailView({
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">ช่องทาง</p>
-              <p className="mt-2 font-medium text-slate-900">LINE OA / mock mode</p>
+              <p className="mt-2 font-medium text-slate-900">{channelLabel}</p>
             </div>
           </div>
         </div>

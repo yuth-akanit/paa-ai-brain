@@ -6,6 +6,7 @@ import { findOrCreateCustomerByChannel, getOrCreateOpenThread, getOrCreateServic
 import { finalClean } from "../../../../lib/utils";
 import { getLineProfile } from "../../../../lib/line/profile";
 import { updateCustomerProfile } from "../../../../lib/db/queries";
+import { describeChannel } from "../../../../lib/line/channel-descriptor";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,30 @@ export async function POST(request: Request) {
       }
     }
     const actualThreadId = thread.id;
+
+    // Stamp which LINE OA this thread belongs to (so admin can see which account)
+    try {
+      const sourceChannel = describeChannel({
+        channelPlatformId: inbound.channelPlatformId,
+        accountKey: inbound.accountKey
+      });
+      const existingMeta = (thread.metadata && typeof thread.metadata === "object") ? thread.metadata as Record<string, unknown> : {};
+      const existingSource = existingMeta.source_channel as Record<string, unknown> | undefined;
+      const needsUpdate =
+        !existingSource ||
+        existingSource.displayName !== sourceChannel.displayName ||
+        existingSource.channelPlatformId !== sourceChannel.channelPlatformId ||
+        existingSource.accountKey !== sourceChannel.accountKey;
+      if (needsUpdate) {
+        await updateThreadState({
+          threadId: actualThreadId,
+          metadataPatch: { source_channel: sourceChannel }
+        });
+        thread.metadata = { ...existingMeta, source_channel: sourceChannel };
+      }
+    } catch (error) {
+      console.warn(`[AI-RESPOND] [${requestId}] source_channel_stamp_failed`, error);
+    }
 
     // 3. Resolve Case
     const serviceCase = await getOrCreateServiceCase(actualThreadId, customer.id);
