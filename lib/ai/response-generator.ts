@@ -4,6 +4,7 @@ import { BOOKING_REQUIRED_FIELDS, getMissingBookingFields } from "@/lib/booking/
 import { aiDecisionSchema } from "@/lib/schemas";
 import type { AiDecision, ExtractedCaseFields, IntentName, KnowledgeSearchResult } from "@/lib/types";
 import { finalClean } from "@/lib/utils";
+import { buildBusinessHoursPromptNote, getBusinessStatus } from "@/lib/utils/business-hours";
 
 type GenerateAiResponseInput = {
   customerMessage: string;
@@ -86,7 +87,14 @@ function buildFallbackResponse(input: GenerateAiResponseInput): AiDecision {
       msg.includes("มีคิวไหม") || msg.includes("คิวว่าง");
 
     if (isAskingWhenPaaFree) {
-      customerReply = "ให้บริการทุกวันเลยครับ ไม่มีวันหยุดประจำ ไม่ทราบว่าคุณลูกค้าสะดวกช่วงวันไหนหรือวันที่เท่าไหร่ครับ?";
+      const biz = getBusinessStatus();
+      if (biz.isClosed) {
+        customerReply = "วันอาทิตย์ทางเราหยุดครับ เปิดทำการวันจันทร์-เสาร์ 09.00-18.00 น. (หลัง 18.00 รับเฉพาะงานซ่อมด่วน ค่าแรง x2) ไม่ทราบว่าสะดวกช่วงไหนครับ?";
+      } else if (biz.isNightOnly) {
+        customerReply = "ตอนนี้เลยเวลาทำการปกติแล้วครับ (09.00-18.00) หลัง 18.00 เรารับเฉพาะงานซ่อมด่วนนะครับ โดยค่าแรงจะคิด x2 ถ้าต้องการนัดงานอื่นๆ สามารถนัดคิวปกติได้วันจันทร์-เสาร์ครับ ไม่ทราบว่าสะดวกวันไหนครับ?";
+      } else {
+        customerReply = "เปิดทำการวันจันทร์-เสาร์ 09.00-18.00 น.ครับ (หลัง 18.00 รับเฉพาะงานซ่อมด่วน ค่าแรง x2 / หยุดวันอาทิตย์) ไม่ทราบว่าคุณลูกค้าสะดวกช่วงวันไหนครับ?";
+      }
     } else {
       customerReply = firstQuestion
         ? questionMap[firstQuestion] ?? "รบกวนขอข้อมูลสำหรับลงคิวจองเพิ่มเติมอีกนิดนะครับ"
@@ -279,6 +287,7 @@ Email: admin@paaair.com`;
   }
 
   try {
+    const bizStatus = getBusinessStatus();
     const raw = await runJsonCompletion(
       buildResponsePrompt(
         {
@@ -286,7 +295,8 @@ Email: admin@paaair.com`;
           threadSummary: input.threadSummary,
           knownFields: input.knownFields,
           knowledge: input.knowledge,
-          priceFacts: resolvedPriceFacts
+          priceFacts: resolvedPriceFacts,
+          businessHoursNote: buildBusinessHoursPromptNote(bizStatus)
         },
         input.intent
       ),

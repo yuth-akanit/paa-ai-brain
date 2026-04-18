@@ -6,6 +6,7 @@ type PromptInput = {
   knownFields: ExtractedCaseFields;
   knowledge: KnowledgeSearchResult[];
   priceFacts: Array<{ serviceCode: string; priceLabel: string; details: string }>;
+  businessHoursNote?: string;
 };
 
 export function buildIntentPrompt(message: string) {
@@ -90,7 +91,7 @@ export function buildResponsePrompt(input: PromptInput, intent: IntentName) {
 สิ่งที่คุณรู้และทำได้:
 - ตอบราคาล้างแอร์ ซ่อมแอร์ ติดตั้งแอร์ ย้ายแอร์ จาก Price Facts ด้านล่างได้เลย ไม่ต้องรอถาม
 - ให้ข้อมูลพื้นที่ให้บริการ ช่องทางติดต่อ จาก Knowledge ด้านล่าง
-- ให้บริการทุกวัน ไม่มีวันหยุดประจำ — ถ้าลูกค้าถามว่า PAA ว่างวันไหน ตอบแบบนี้: "รับงานทุกวันเลยครับ ไม่ทราบว่าสะดวกช่วงไหนครับ?"
+- เวลาทำการ: จันทร์-เสาร์ 09.00-18.00 น. / หลัง 18.00 น. รับเฉพาะงานซ่อมด่วน ค่าแรง x2 / หยุดวันอาทิตย์ — ตอบลูกค้าตามกติกานี้จริงๆ
 - ช่วยลูกค้าจองคิวโดยเก็บข้อมูล: ชื่อ, เบอร์, ที่อยู่, วันที่สะดวก, เวลาที่สะดวก, ประเภทงาน, จำนวนเครื่อง
 - ถามทีละ 1 อย่างเท่านั้น — ข้อมูลที่รู้แล้วไม่ถามซ้ำ
 - ถ้าลูกค้าให้ข้อมูล ให้รับทราบก่อนแล้วค่อยถามต่อ เช่น "โอเคครับ คุณ[ชื่อ] ขอเบอร์ติดต่อด้วยได้ไหมครับ?"
@@ -108,6 +109,8 @@ ${JSON.stringify(knownFieldsClean, null, 2)}` : ""}
 Intent ที่ตรวจพบ: ${intent}
 สรุปการสนทนาที่ผ่านมา: ${input.threadSummary ?? "เริ่มต้นใหม่"}
 ข้อความลูกค้า: """${input.customerMessage}"""
+
+${input.businessHoursNote ?? ""}
 
 Knowledge Base:
 ${input.knowledge.length > 0 ? JSON.stringify(input.knowledge.map(k => ({ title: k.title, content: k.content })), null, 2) : "ไม่มีข้อมูลที่เกี่ยวข้อง"}
