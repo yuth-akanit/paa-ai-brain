@@ -196,7 +196,7 @@ export async function processCustomerMessage(params: {
   // Parallelize logic
   const [rawExtractedFields, classified, knowledge, priceFacts] = await Promise.all([
     extractStructuredFields(params.messageText, currentCaseFields, params.imageBase64),
-    classifyIntent(params.messageText, params.imageBase64),
+    classifyIntent(params.messageText, params.imageBase64, undefined, currentCaseFields),
     searchKnowledge(params.messageText),
     listPricingFacts()
   ]);

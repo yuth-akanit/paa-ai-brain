@@ -1,6 +1,6 @@
 import { buildIntentPrompt } from "./prompts";
 import { runJsonCompletion } from "./client";
-import type { IntentName } from "../types";
+import type { ExtractedCaseFields, IntentName } from "../types";
 
 const heuristicMap: Array<{ intent: IntentName; keywords: string[] }> = [
   { intent: "closing", keywords: ["ขอบคุณ", "ขอบใจ", "thank you", "ขอบคุณมาก", "โอเคครับ", "โอเคค่ะ", "รับทราบครับ", "รับทราบค่ะ"] },
@@ -93,8 +93,42 @@ export function isStandardCleaningPricing(text: string): boolean {
   return asksPrice && cleaning && !nonStandard;
 }
 
-export async function classifyIntent(message: string, imageBase64?: string | null, options?: { disableRemote?: boolean }): Promise<{ intent: IntentName; confidence: number }> {
+// Returns true when the message is purely a phone number (Thai mobile/fixed-line).
+// Prevents the LLM from classifying "0812345678" as faq_contact when the customer
+// is actually providing their number mid-booking.
+function isPhoneNumberOnly(text: string): boolean {
+  const stripped = text.trim().replace(/[-\s()]/g, "");
+  return /^0[0-9]{8,9}$/.test(stripped);
+}
+
+// Infer the most likely ongoing intent from what fields have already been collected.
+function inferOngoingIntent(knownFields: ExtractedCaseFields): IntentName | null {
+  const svc = knownFields.service_type;
+  if (svc === "repair") return "repair_request";
+  if (svc === "cleaning") return "cleaning_request";
+  if (svc === "inspection") return "inspection_request";
+  if (svc === "relocation") return "relocation_request";
+  if (svc === "cold_room") return "cold_room_request";
+  if (knownFields.symptoms) return "repair_request";
+  if (knownFields.preferred_date || knownFields.preferred_time) return "scheduling_request";
+  if (knownFields.customer_name || knownFields.phone || knownFields.area) return "cleaning_request";
+  return null;
+}
+
+export async function classifyIntent(
+  message: string,
+  imageBase64?: string | null,
+  options?: { disableRemote?: boolean },
+  knownFields?: ExtractedCaseFields
+): Promise<{ intent: IntentName; confidence: number }> {
   const lowerMessage = message.toLowerCase();
+
+  // If the message is just a phone number, treat it as data provision in the ongoing
+  // booking flow — never classify as faq_contact.
+  if (!imageBase64 && isPhoneNumberOnly(lowerMessage)) {
+    const ongoing = knownFields ? inferOngoingIntent(knownFields) : null;
+    return { intent: ongoing ?? "general_inquiry", confidence: 0.85 };
+  }
 
   // Installation intent — must be checked before pricing so "ติดตั้งแอร์ราคาเท่าไหร่"
   // is routed correctly instead of landing as a low-confidence faq_pricing
