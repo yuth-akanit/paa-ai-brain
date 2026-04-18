@@ -11,20 +11,39 @@ const SERVICE_TYPE_LABELS: Record<string, string> = {
   cold_room: "ห้องเย็น"
 };
 
+const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+function formatThaiDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const day = THAI_DAYS[d.getUTCDay()];
+  const date = d.getUTCDate();
+  const month = THAI_MONTHS[d.getUTCMonth()];
+  const year = d.getUTCFullYear() + 543;
+  return `${day}ที่ ${date} ${month} ${year}`;
+}
+
+function formatThaiTime(time: string): string {
+  return time.replace(":", ".") + " น.";
+}
+
 function formatBookingMessage(payload: BookingWebhookPayload): string {
   const serviceLabel = SERVICE_TYPE_LABELS[payload.service_type] ?? payload.service_type;
+  const location = payload.area || payload.address;
   const lines = [
     "🔔 มีการจองงานใหม่!",
     "",
-    `ลูกค้า: ${payload.customer_name}`,
-    `เบอร์: ${payload.phone}`,
-    `ที่อยู่: ${payload.address}`,
-    payload.area ? `พื้นที่: ${payload.area}` : null,
-    `บริการ: ${serviceLabel}`,
-    `จำนวนเครื่อง: ${payload.machine_count} เครื่อง`,
-    `วันที่: ${payload.date}`,
-    `เวลา: ${payload.time}`,
-    payload.symptoms ? `อาการ: ${payload.symptoms}` : null,
+    "📋 รายละเอียดการนัด",
+    `- งาน: ${serviceLabel} ${payload.machine_count} เครื่อง`,
+    `- วันที่: ${formatThaiDate(payload.date)}`,
+    `- เวลา: ${formatThaiTime(payload.time)}`,
+    location ? `- สถานที่: ${location}` : null,
+    payload.address && payload.area && payload.address !== payload.area
+      ? `- ที่อยู่เพิ่มเติม: ${payload.address}` : null,
+    `- ชื่อ: คุณ${payload.customer_name}`,
+    `- เบอร์: ${payload.phone}`,
+    payload.symptoms ? `- อาการ: ${payload.symptoms}` : null,
     "",
     `Case: ${payload.case_id}`
   ];
