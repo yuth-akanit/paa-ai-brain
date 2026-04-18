@@ -139,7 +139,7 @@ function resolveIntentWithCaseContext(args: {
     args.classifiedIntent === "greeting" ||
     args.classifiedIntent === "closing";
 
-  const fillsMissingStructuredField = missingFields.some((field) => {
+  const fillsMissingStructuredField = missingFields.some((field: string) => {
     if (!STRUCTURED_FOLLOWUP_FIELDS.includes(field as keyof ExtractedCaseFields)) {
       return false;
     }
