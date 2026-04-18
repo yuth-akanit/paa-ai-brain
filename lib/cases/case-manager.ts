@@ -1,7 +1,7 @@
 import { classifyIntent } from "../ai/intent-classifier";
 import { generateAiResponse } from "../ai/response-generator";
 import { extractStructuredFields } from "../ai/structured-extractor";
-import { isBookingReady, sendBookingWebhook } from "../booking/webhook";
+import { getMissingBookingFields, sendBookingWebhook } from "../booking/webhook";
 import {
   createAuditLog,
   createConversationMessage,
@@ -295,10 +295,12 @@ export async function processCustomerMessage(params: {
 
   const bookingEligibleIntents = ["cleaning_request", "repair_request", "inspection_request", "relocation_request", "scheduling_request"];
   const bookingAlreadySent = await hasAuditLogAction("service_case", params.caseId, "booking_webhook_sent");
+  const missingForBooking = getMissingBookingFields(mergedFields);
   const canSendBookingWebhook =
     bookingEligibleIntents.includes(aiDecision.intent) &&
-    isBookingReady(mergedFields) &&
+    missingForBooking.length === 0 &&
     !bookingAlreadySent;
+  console.log(`[CASE-MANAGER] booking_check intent=${aiDecision.intent} missing=${JSON.stringify(missingForBooking)} alreadySent=${bookingAlreadySent} can=${canSendBookingWebhook}`);
 
   if (canSendBookingWebhook) {
     try {
@@ -309,7 +311,7 @@ export async function processCustomerMessage(params: {
         customer_id: params.customerId,
         customer_name: mergedFields.customer_name,
         phone: mergedFields.phone,
-        address: mergedFields.address,
+        address: mergedFields.address || mergedFields.area || "",
         date: mergedFields.preferred_date,
         time: mergedFields.preferred_time,
         service_type: mergedFields.service_type,

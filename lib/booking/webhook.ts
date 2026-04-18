@@ -21,7 +21,6 @@ export type BookingWebhookPayload = {
 export const BOOKING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
   "customer_name",
   "phone",
-  "address",
   "preferred_date",
   "preferred_time",
   "service_type",
@@ -29,12 +28,20 @@ export const BOOKING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
 ];
 
 export function getMissingBookingFields(fields: ExtractedCaseFields) {
-  return BOOKING_REQUIRED_FIELDS.filter((field) => {
+  const missing = BOOKING_REQUIRED_FIELDS.filter((field) => {
     const value = fields[field];
     if (value === null || value === undefined) return true;
     if (typeof value === "string") return value.trim().length === 0;
     return false;
   });
+
+  // address OR area must be present
+  const hasLocation =
+    (fields.address && fields.address.trim().length > 0) ||
+    (fields.area && fields.area.trim().length > 0);
+  if (!hasLocation) missing.push("address");
+
+  return missing;
 }
 
 export function isBookingReady(fields: ExtractedCaseFields): fields is ExtractedCaseFields & {
