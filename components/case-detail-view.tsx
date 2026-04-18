@@ -36,6 +36,10 @@ export function CaseDetailView({
   const showTakeOverButton = !showReleaseButton;
   const missingFields = (serviceCase as any).missing_fields ?? [];
   const confidence = typeof serviceCase.ai_confidence === "number" ? Math.round(serviceCase.ai_confidence * 100) : null;
+  const lineDisplayName = customer?.display_name || null;
+  const providedName = extracted.customer_name || null;
+  const primaryName = lineDisplayName || providedName || "ยังไม่ทราบชื่อลูกค้า";
+  const showProvidedName = Boolean(lineDisplayName && providedName && lineDisplayName !== providedName);
 
   // Helper to compare values and return a status badge
   const CompareStatus = ({ label, expected, actual }: { label: string; expected: any; actual: any }) => {
@@ -61,7 +65,10 @@ export function CaseDetailView({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-sm text-slate-500">เคส #{serviceCase.id.slice(0, 8)}</p>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{customer?.display_name || "ยังไม่ทราบชื่อลูกค้า"}</h2>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{primaryName}</h2>
+              {showProvidedName ? (
+                <p className="mt-2 text-sm text-slate-500">ชื่อลูกค้าแจ้ง: {providedName}</p>
+              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatusBadge value={serviceCase.lead_status} />
                 <IntentBadge value={serviceCase.ai_intent} />
@@ -170,8 +177,12 @@ export function CaseDetailView({
           <h3 className="text-lg font-semibold text-slate-900">โปรไฟล์ลูกค้า</h3>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">ชื่อลูกค้า</p>
-              <p className="mt-2 font-medium text-slate-900">{customer?.display_name || extracted.customer_name || "ยังไม่ทราบชื่อ"}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">ชื่อ LINE</p>
+              <p className="mt-2 font-medium text-slate-900">{lineDisplayName || "ยังไม่ทราบชื่อ"}</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">ชื่อลูกค้าแจ้ง</p>
+              <p className="mt-2 font-medium text-slate-900">{providedName || "-"}</p>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">ช่องทาง</p>

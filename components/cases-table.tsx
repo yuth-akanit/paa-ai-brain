@@ -15,6 +15,7 @@ type CaseRow = {
   summary: string | null;
   missing_fields?: string[] | null;
   extracted_fields?: {
+    customer_name?: string;
     area?: string;
     urgency?: string;
     preferred_date?: string;
@@ -62,6 +63,24 @@ function isManualTakeover(item: CaseRow) {
   return item.handoff_reason === "admin_manual_takeover";
 }
 
+function getLineDisplayName(item: CaseRow) {
+  return item.customers?.display_name || null;
+}
+
+function getCustomerProvidedName(item: CaseRow) {
+  return item.extracted_fields?.customer_name || null;
+}
+
+function getPrimaryName(item: CaseRow) {
+  return getLineDisplayName(item) || getCustomerProvidedName(item) || "ยังไม่ทราบชื่อ";
+}
+
+function shouldShowProvidedName(item: CaseRow) {
+  const lineName = getLineDisplayName(item);
+  const providedName = getCustomerProvidedName(item);
+  return Boolean(lineName && providedName && lineName !== providedName);
+}
+
 /* ──────────────────────────────────────────────────────
    Mobile card for each case
    ────────────────────────────────────────────────────── */
@@ -75,8 +94,11 @@ function CaseCard({ item }: { item: CaseRow }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-slate-900">
-            {item.customers?.display_name || "ยังไม่ทราบชื่อ"}
+            {getPrimaryName(item)}
           </p>
+          {shouldShowProvidedName(item) ? (
+            <p className="mt-1 text-xs text-slate-500">ชื่อลูกค้าแจ้ง: {getCustomerProvidedName(item)}</p>
+          ) : null}
           <p className="mt-0.5 text-xs text-slate-400">
             {item.customers?.phone || "-"} · #{item.id.slice(0, 8)}
           </p>
@@ -165,8 +187,11 @@ export function CasesTable({ cases }: { cases: CaseRow[] }) {
               <tr key={item.id} className="align-top text-sm transition hover:bg-slate-50/80">
                 <td className="px-6 py-4">
                   <Link href={`/admin/cases/${item.id}`} className="font-medium text-slate-900 hover:text-emerald-700">
-                    {item.customers?.display_name || "ยังไม่ทราบชื่อ"}
+                    {getPrimaryName(item)}
                   </Link>
+                  {shouldShowProvidedName(item) ? (
+                    <p className="mt-1 text-xs text-slate-500">ชื่อลูกค้าแจ้ง: {getCustomerProvidedName(item)}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-slate-500">{item.customers?.phone || "-"}</p>
                   <p className="mt-2 text-xs text-slate-400">#{item.id.slice(0, 8)}</p>
                 </td>

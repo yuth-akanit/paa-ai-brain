@@ -272,7 +272,7 @@ export async function processCustomerMessage(params: {
   });
 
   await updateCustomerProfile(params.customerId, {
-    display_name: mergedFields.customer_name ?? params.customerName ?? undefined,
+    display_name: params.customerName ?? undefined,
     phone: mergedFields.phone,
     default_area: mergedFields.area
   });
