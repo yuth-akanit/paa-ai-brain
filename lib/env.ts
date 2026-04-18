@@ -14,7 +14,7 @@ const envSchema = z.object({
   LINE_CHANNEL_ACCESS_TOKEN_P_AND_A_AIR: z.string().min(1).optional(),
   LINE_CHANNEL_ACCESS_TOKEN_PA_COOLING: z.string().min(1).optional(),
   LINE_ADMIN_NOTIFY_TARGETS: z.string().min(1).optional(),
-  LINE_ADMIN_BOOKING_WEBHOOK_URL: z.string().url().default("https://admin.paaair.online/webhook/line-admin-booking"),
+  LINE_ADMIN_BOOKING_WEBHOOK_URL: z.string().url().default("https://brain.paaair.online/api/webhooks/line-admin-booking"),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   AI_GATEWAY_INTERNAL_KEY: z.string().min(1).optional()
 });

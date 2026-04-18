@@ -51,11 +51,13 @@ export function isBookingReady(fields: ExtractedCaseFields): fields is Extracted
 
 export async function sendBookingWebhook(payload: BookingWebhookPayload) {
   const env = getEnv();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (env.AI_GATEWAY_INTERNAL_KEY) {
+    headers["x-ai-gateway-key"] = env.AI_GATEWAY_INTERNAL_KEY;
+  }
   const response = await fetch(env.LINE_ADMIN_BOOKING_WEBHOOK_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers,
     body: JSON.stringify(payload)
   });
 
