@@ -65,6 +65,7 @@ export async function POST(request: Request) {
   }
 
   const token =
+    env.LINE_CHANNEL_ACCESS_TOKEN_CEO_ASSIST ||
     env.LINE_CHANNEL_ACCESS_TOKEN_PAA_AIR ||
     env.LINE_CHANNEL_ACCESS_TOKEN_P_AND_A_AIR ||
     env.LINE_CHANNEL_ACCESS_TOKEN_PA_COOLING ||
