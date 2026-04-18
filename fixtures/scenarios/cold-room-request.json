@@ -1,0 +1,36 @@
+{
+  "name": "cold_room_request_handoff",
+  "tags": ["commercial", "handoff", "critical"],
+  "severity": "critical",
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s006",
+      "display_name": "อารีย์"
+    },
+    "message": "มีปัญหาห้องเย็นของโรงงาน อุณหภูมิไม่นิ่ง ต้องการให้เข้าดูด่วน",
+    "prior_case_state": {
+      "extracted_fields": {
+        "area": "ชลบุรี"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cold_room_request",
+    "should_handoff": true,
+    "missing_fields": [],
+    "customer_reply_equals": "เคสนี้เป็นงานเฉพาะทาง เดี๋ยวเจ้าหน้าที่ประสานกลับเพื่อประเมินหน้างานครับ",
+    "handoff_reason": "complex_specialized_case",
+    "admin_summary": {
+      "reason": "complex_specialized_case",
+      "recommended_next_action": "admin_contact_and_schedule_site_visit"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-004"],
+    "policy_scope": ["mandatory_handoff", "no_technical_advice"],
+    "should_handoff": true,
+    "allowed_answer_types": ["handoff_notification"],
+    "forbidden_answer_types": ["technical_troubleshooting", "price_estimate"]
+  }
+}

@@ -1,0 +1,234 @@
+[
+  {
+    "id": "mock-case-001",
+    "customer_id": "mock-customer-001",
+    "thread_id": "mock-thread-001",
+    "lead_status": "collecting_info",
+    "service_type": "repair",
+    "ai_intent": "repair_request",
+    "ai_confidence": 0.84,
+    "extracted_fields": {
+      "customer_name": "สมชาย",
+      "phone": "0812345678",
+      "area": "บางพลี",
+      "service_type": "repair",
+      "machine_count": 2,
+      "symptoms": "แอร์ไม่เย็น 2 เครื่อง",
+      "urgency": "medium"
+    },
+    "missing_fields": ["preferred_date"],
+    "summary": "ลูกค้าแจ้งแอร์ไม่เย็น 2 เครื่อง อยู่บางพลี และยังไม่ได้ระบุวันที่สะดวก",
+    "handoff_reason": null,
+    "updated_at": "2026-04-15T10:15:00.000Z",
+    "customers": {
+      "id": "mock-customer-001",
+      "display_name": "สมชาย",
+      "phone": "0812345678",
+      "default_area": "บางพลี"
+    },
+    "conversation_threads": {
+      "id": "mock-thread-001",
+      "status": "waiting_customer"
+    },
+    "admin_handoffs": []
+  },
+  {
+    "id": "mock-case-002",
+    "customer_id": "mock-customer-002",
+    "thread_id": "mock-thread-002",
+    "lead_status": "qualified",
+    "service_type": "cleaning",
+    "ai_intent": "cleaning_request",
+    "ai_confidence": 0.93,
+    "extracted_fields": {
+      "customer_name": "มณี",
+      "phone": "0823456789",
+      "area": "ลาดพร้าว",
+      "service_type": "cleaning",
+      "machine_count": 3,
+      "preferred_date": "18 เม.ย. 2569 ช่วงบ่าย",
+      "urgency": "low"
+    },
+    "missing_fields": [],
+    "summary": "ลูกค้าต้องการล้างแอร์ 3 เครื่อง ที่ลาดพร้าว พร้อมวันที่สะดวกครบแล้ว",
+    "handoff_reason": null,
+    "updated_at": "2026-04-15T09:40:00.000Z",
+    "customers": {
+      "id": "mock-customer-002",
+      "display_name": "มณี",
+      "phone": "0823456789",
+      "default_area": "ลาดพร้าว"
+    },
+    "conversation_threads": {
+      "id": "mock-thread-002",
+      "status": "qualified"
+    },
+    "admin_handoffs": []
+  },
+  {
+    "id": "mock-case-003",
+    "customer_id": "mock-customer-003",
+    "thread_id": "mock-thread-003",
+    "lead_status": "handed_off",
+    "service_type": "cold_room",
+    "ai_intent": "cold_room_request",
+    "ai_confidence": 0.41,
+    "extracted_fields": {
+      "customer_name": "อารีย์",
+      "phone": "0834567890",
+      "area": "อมตะนคร ชลบุรี",
+      "service_type": "cold_room",
+      "symptoms": "ห้องเย็นอุณหภูมิไม่นิ่งและมีแจ้งเตือน",
+      "preferred_date": "ด่วนวันนี้",
+      "urgency": "high"
+    },
+    "missing_fields": [],
+    "summary": "ลูกค้าสอบถามงานห้องเย็นที่โรงงาน ต้องให้แอดมินรับช่วงต่อ",
+    "handoff_reason": "complex_specialized_case",
+    "updated_at": "2026-04-15T08:55:00.000Z",
+    "customers": {
+      "id": "mock-customer-003",
+      "display_name": "อารีย์",
+      "phone": "0834567890",
+      "default_area": "อมตะนคร ชลบุรี"
+    },
+    "conversation_threads": {
+      "id": "mock-thread-003",
+      "status": "handed_off"
+    },
+    "admin_handoffs": [
+      {
+        "id": "mock-handoff-003",
+        "handoff_reason": "complex_specialized_case",
+        "status": "pending"
+      }
+    ]
+  },
+  {
+    "id": "mock-case-004",
+    "customer_id": "mock-customer-004",
+    "thread_id": "mock-thread-004",
+    "lead_status": "new",
+    "service_type": "cleaning",
+    "ai_intent": "faq_pricing",
+    "ai_confidence": 0.88,
+    "extracted_fields": {
+      "customer_name": "นัท",
+      "service_type": "cleaning",
+      "machine_count": 1
+    },
+    "missing_fields": ["area"],
+    "summary": "ลูกค้าถามราคาล้างแอร์เบื้องต้น ยังไม่ได้ระบุพื้นที่สำหรับประเมินต่อ",
+    "handoff_reason": null,
+    "updated_at": "2026-04-15T11:10:00.000Z",
+    "customers": {
+      "id": "mock-customer-004",
+      "display_name": "นัท",
+      "phone": null,
+      "default_area": null
+    },
+    "conversation_threads": {
+      "id": "mock-thread-004",
+      "status": "open"
+    },
+    "admin_handoffs": []
+  },
+  {
+    "id": "mock-case-005",
+    "customer_id": "mock-customer-005",
+    "thread_id": "mock-thread-005",
+    "lead_status": "collecting_info",
+    "service_type": "inspection",
+    "ai_intent": "inspection_request",
+    "ai_confidence": 0.79,
+    "extracted_fields": {
+      "customer_name": "กัญญา",
+      "phone": "0845678901",
+      "area": "พระราม 2",
+      "service_type": "inspection",
+      "urgency": "medium"
+    },
+    "missing_fields": ["preferred_date"],
+    "summary": "ลูกค้าขอช่างเข้าตรวจเช็กหน้างานเพื่อประเมินอาการ แต่ยังไม่ได้แจ้งวันที่สะดวก",
+    "handoff_reason": null,
+    "updated_at": "2026-04-15T10:48:00.000Z",
+    "customers": {
+      "id": "mock-customer-005",
+      "display_name": "กัญญา",
+      "phone": "0845678901",
+      "default_area": "พระราม 2"
+    },
+    "conversation_threads": {
+      "id": "mock-thread-005",
+      "status": "waiting_customer"
+    },
+    "admin_handoffs": []
+  },
+  {
+    "id": "mock-case-006",
+    "customer_id": "mock-customer-006",
+    "thread_id": "mock-thread-006",
+    "lead_status": "qualified",
+    "service_type": "relocation",
+    "ai_intent": "relocation_request",
+    "ai_confidence": 0.82,
+    "extracted_fields": {
+      "customer_name": "พีท",
+      "phone": "0856789012",
+      "area": "รังสิต",
+      "service_type": "relocation",
+      "machine_count": 1,
+      "preferred_date": "เสาร์นี้ช่วงเช้า",
+      "urgency": "medium"
+    },
+    "missing_fields": [],
+    "summary": "ลูกค้าต้องการย้ายแอร์ 1 เครื่องจากคอนโดไปทาวน์โฮม พร้อมช่วงเวลาที่สะดวกครบแล้ว",
+    "handoff_reason": null,
+    "updated_at": "2026-04-15T09:05:00.000Z",
+    "customers": {
+      "id": "mock-customer-006",
+      "display_name": "พีท",
+      "phone": "0856789012",
+      "default_area": "รังสิต"
+    },
+    "conversation_threads": {
+      "id": "mock-thread-006",
+      "status": "qualified"
+    },
+    "admin_handoffs": []
+  },
+  {
+    "id": "mock-case-007",
+    "customer_id": "mock-customer-007",
+    "thread_id": "mock-thread-007",
+    "lead_status": "handed_off",
+    "service_type": "other",
+    "ai_intent": "general_inquiry",
+    "ai_confidence": 0.38,
+    "extracted_fields": {
+      "customer_name": "ไม่ระบุชื่อ",
+      "urgency": "medium"
+    },
+    "missing_fields": ["area", "service_type", "preferred_date"],
+    "summary": "ลูกค้าถามเงื่อนไขงานแบบกว้างและข้อมูลไม่ชัด ระบบจึงจัดเป็น low-confidence handoff",
+    "handoff_reason": "low_confidence_or_policy_limit",
+    "updated_at": "2026-04-15T11:25:00.000Z",
+    "customers": {
+      "id": "mock-customer-007",
+      "display_name": "ผู้สอบถามทั่วไป",
+      "phone": null,
+      "default_area": null
+    },
+    "conversation_threads": {
+      "id": "mock-thread-007",
+      "status": "handed_off"
+    },
+    "admin_handoffs": [
+      {
+        "id": "mock-handoff-007",
+        "handoff_reason": "low_confidence_or_policy_limit",
+        "status": "pending"
+      }
+    ]
+  }
+]

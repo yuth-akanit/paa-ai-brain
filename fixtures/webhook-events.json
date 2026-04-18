@@ -1,0 +1,34 @@
+[
+  {
+    "name": "repair_request_basic",
+    "payload": {
+      "channel": "line",
+      "profile": {
+        "user_id": "mock-line-s005",
+        "display_name": "สมชาย"
+      },
+      "message": "แอร์ไม่เย็น 2 เครื่อง อยู่บางพลี ขอช่างเข้าตรวจพรุ่งนี้ช่วงบ่ายครับ",
+      "prior_case_state": {
+        "extracted_fields": {
+          "customer_name": "สมชาย"
+        }
+      }
+    }
+  },
+  {
+    "name": "cold_room_request_handoff",
+    "payload": {
+      "channel": "line",
+      "profile": {
+        "user_id": "mock-line-s006",
+        "display_name": "อารีย์"
+      },
+      "message": "มีปัญหาห้องเย็นของโรงงาน อุณหภูมิไม่นิ่ง ต้องการให้เข้าดูด่วน",
+      "prior_case_state": {
+        "extracted_fields": {
+          "area": "ชลบุรี"
+        }
+      }
+    }
+  }
+]

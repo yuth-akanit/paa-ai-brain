@@ -1,0 +1,299 @@
+{
+  "mock-case-001": {
+    "serviceCase": {
+      "id": "mock-case-001",
+      "customer_id": "mock-customer-001",
+      "thread_id": "mock-thread-001",
+      "lead_status": "collecting_info",
+      "service_type": "repair",
+      "ai_confidence": 0.84,
+      "summary": "ลูกค้าแจ้งแอร์ไม่เย็น 2 เครื่อง อยู่บางพลี และยังไม่ได้ระบุวันที่สะดวก",
+      "handoff_reason": null,
+      "updated_at": "2026-04-15T10:15:00.000Z",
+      "missing_fields": ["preferred_date"],
+      "extracted_fields": {
+        "customer_name": "สมชาย",
+        "phone": "0812345678",
+        "area": "บางพลี",
+        "service_type": "repair",
+        "machine_count": 2,
+        "symptoms": "แอร์ไม่เย็น 2 เครื่อง",
+        "urgency": "medium"
+      },
+      "customers": {
+        "display_name": "สมชาย",
+        "phone": "0812345678"
+      },
+      "admin_handoffs": []
+    },
+    "messages": [
+      {
+        "id": "mock-msg-001",
+        "role": "customer",
+        "message_text": "แอร์ไม่เย็น 2 เครื่องครับ อยู่บางพลี",
+        "created_at": "2026-04-15T10:10:00.000Z"
+      },
+      {
+        "id": "mock-msg-002",
+        "role": "assistant",
+        "message_text": "รับทราบครับ ตอนนี้ผมบันทึกอาการและพื้นที่ให้แล้ว ขอทราบวันที่หรือเวลาที่สะดวกให้ช่างเข้าตรวจเพิ่มเติมอีกนิดนะครับ",
+        "created_at": "2026-04-15T10:12:00.000Z"
+      }
+    ]
+  },
+  "mock-case-002": {
+    "serviceCase": {
+      "id": "mock-case-002",
+      "customer_id": "mock-customer-002",
+      "thread_id": "mock-thread-002",
+      "lead_status": "qualified",
+      "service_type": "cleaning",
+      "ai_confidence": 0.93,
+      "summary": "ลูกค้าต้องการล้างแอร์ 3 เครื่อง ที่ลาดพร้าว พร้อมวันที่สะดวกครบแล้ว",
+      "handoff_reason": null,
+      "updated_at": "2026-04-15T09:40:00.000Z",
+      "missing_fields": [],
+      "extracted_fields": {
+        "customer_name": "มณี",
+        "phone": "0823456789",
+        "area": "ลาดพร้าว",
+        "service_type": "cleaning",
+        "machine_count": 3,
+        "preferred_date": "18 เม.ย. 2569 ช่วงบ่าย",
+        "urgency": "low"
+      },
+      "customers": {
+        "display_name": "มณี",
+        "phone": "0823456789"
+      },
+      "admin_handoffs": []
+    },
+    "messages": [
+      {
+        "id": "mock-msg-003",
+        "role": "customer",
+        "message_text": "ขอล้างแอร์ 3 เครื่องครับ อยู่ลาดพร้าว สะดวกวันศุกร์ช่วงบ่าย",
+        "created_at": "2026-04-15T09:35:00.000Z"
+      },
+      {
+        "id": "mock-msg-004",
+        "role": "assistant",
+        "message_text": "รับทราบครับ ข้อมูลเบื้องต้นของงานล้างแอร์ครบแล้ว เดี๋ยวระบบส่งต่อให้แอดมินตรวจสอบคิวและยืนยันรายละเอียดต่อครับ",
+        "created_at": "2026-04-15T09:38:00.000Z"
+      }
+    ]
+  },
+  "mock-case-003": {
+    "serviceCase": {
+      "id": "mock-case-003",
+      "customer_id": "mock-customer-003",
+      "thread_id": "mock-thread-003",
+      "lead_status": "handed_off",
+      "service_type": "cold_room",
+      "ai_confidence": 0.41,
+      "summary": "ลูกค้าสอบถามงานห้องเย็นที่โรงงาน ต้องให้แอดมินรับช่วงต่อ",
+      "handoff_reason": "complex_specialized_case",
+      "admin_summary": "ลูกค้าสอบถามงานห้องเย็นสำหรับโรงงาน ต้องให้แอดมินรับต่อเพื่อประเมินหน้างานและวางแผนเข้าตรวจ",
+      "updated_at": "2026-04-15T08:55:00.000Z",
+      "missing_fields": [],
+      "extracted_fields": {
+        "customer_name": "อารีย์",
+        "phone": "0834567890",
+        "area": "อมตะนคร ชลบุรี",
+        "service_type": "cold_room",
+        "symptoms": "ห้องเย็นอุณหภูมิไม่นิ่งและมีแจ้งเตือน",
+        "preferred_date": "ด่วนวันนี้",
+        "urgency": "high"
+      },
+      "customers": {
+        "display_name": "อารีย์",
+        "phone": "0834567890"
+      },
+      "admin_handoffs": [
+        {
+          "id": "mock-handoff-003",
+          "handoff_reason": "complex_specialized_case",
+          "status": "pending"
+        }
+      ]
+    },
+    "messages": [
+      {
+        "id": "mock-msg-005",
+        "role": "customer",
+        "message_text": "ช่วยดูห้องเย็นที่โรงงานให้หน่อยค่ะ อุณหภูมิไม่นิ่ง",
+        "created_at": "2026-04-15T08:48:00.000Z"
+      },
+      {
+        "id": "mock-msg-006",
+        "role": "assistant",
+        "message_text": "รับทราบครับ เคสนี้เป็นงานเฉพาะทาง เดี๋ยวเจ้าหน้าที่ประสานกลับเพื่อประเมินหน้างานครับ",
+        "created_at": "2026-04-15T08:50:00.000Z"
+      }
+    ]
+  },
+  "mock-case-004": {
+    "serviceCase": {
+      "id": "mock-case-004",
+      "customer_id": "mock-customer-004",
+      "thread_id": "mock-thread-004",
+      "lead_status": "new",
+      "service_type": "cleaning",
+      "ai_confidence": 0.88,
+      "summary": "ลูกค้าถามราคาล้างแอร์เบื้องต้น ยังไม่ได้ระบุพื้นที่สำหรับประเมินต่อ",
+      "handoff_reason": null,
+      "updated_at": "2026-04-15T11:10:00.000Z",
+      "missing_fields": ["area"],
+      "extracted_fields": {
+        "customer_name": "นัท",
+        "service_type": "cleaning",
+        "machine_count": 1
+      },
+      "customers": {
+        "display_name": "นัท",
+        "phone": null
+      },
+      "admin_handoffs": []
+    },
+    "messages": [
+      {
+        "id": "mock-msg-007",
+        "role": "customer",
+        "message_text": "ล้างแอร์ราคาเท่าไหร่ครับ 1 เครื่อง",
+        "created_at": "2026-04-15T11:07:00.000Z"
+      },
+      {
+        "id": "mock-msg-008",
+        "role": "assistant",
+        "message_text": "ราคาล้างแอร์เบื้องต้นขึ้นอยู่กับขนาด BTU และพื้นที่ครับ หากแจ้งเขตหรือพื้นที่ได้ ผมจะช่วยเก็บข้อมูลเพื่อให้ทีมประเมินต่อได้แม่นขึ้นครับ",
+        "created_at": "2026-04-15T11:08:00.000Z"
+      }
+    ]
+  },
+  "mock-case-005": {
+    "serviceCase": {
+      "id": "mock-case-005",
+      "customer_id": "mock-customer-005",
+      "thread_id": "mock-thread-005",
+      "lead_status": "collecting_info",
+      "service_type": "inspection",
+      "ai_confidence": 0.79,
+      "summary": "ลูกค้าขอช่างเข้าตรวจเช็กหน้างานเพื่อประเมินอาการ แต่ยังไม่ได้แจ้งวันที่สะดวก",
+      "handoff_reason": null,
+      "updated_at": "2026-04-15T10:48:00.000Z",
+      "missing_fields": ["preferred_date"],
+      "extracted_fields": {
+        "customer_name": "กัญญา",
+        "phone": "0845678901",
+        "area": "พระราม 2",
+        "service_type": "inspection",
+        "urgency": "medium"
+      },
+      "customers": {
+        "display_name": "กัญญา",
+        "phone": "0845678901"
+      },
+      "admin_handoffs": []
+    },
+    "messages": [
+      {
+        "id": "mock-msg-009",
+        "role": "customer",
+        "message_text": "ขอช่างเข้าตรวจเช็กแอร์ที่บ้านแถวพระราม 2 ค่ะ",
+        "created_at": "2026-04-15T10:42:00.000Z"
+      },
+      {
+        "id": "mock-msg-010",
+        "role": "assistant",
+        "message_text": "รับทราบครับ ตอนนี้ผมมีข้อมูลพื้นที่แล้ว ขอทราบวันที่หรือช่วงเวลาที่สะดวกให้ช่างเข้าตรวจเพิ่มเติมครับ",
+        "created_at": "2026-04-15T10:44:00.000Z"
+      }
+    ]
+  },
+  "mock-case-006": {
+    "serviceCase": {
+      "id": "mock-case-006",
+      "customer_id": "mock-customer-006",
+      "thread_id": "mock-thread-006",
+      "lead_status": "qualified",
+      "service_type": "relocation",
+      "ai_confidence": 0.82,
+      "summary": "ลูกค้าต้องการย้ายแอร์ 1 เครื่องจากคอนโดไปทาวน์โฮม พร้อมช่วงเวลาที่สะดวกครบแล้ว",
+      "handoff_reason": null,
+      "updated_at": "2026-04-15T09:05:00.000Z",
+      "missing_fields": [],
+      "extracted_fields": {
+        "customer_name": "พีท",
+        "phone": "0856789012",
+        "area": "รังสิต",
+        "service_type": "relocation",
+        "machine_count": 1,
+        "preferred_date": "เสาร์นี้ช่วงเช้า",
+        "urgency": "medium"
+      },
+      "customers": {
+        "display_name": "พีท",
+        "phone": "0856789012"
+      },
+      "admin_handoffs": []
+    },
+    "messages": [
+      {
+        "id": "mock-msg-011",
+        "role": "customer",
+        "message_text": "อยากย้ายแอร์ 1 เครื่องจากคอนโดไปบ้านใหม่แถวรังสิต สะดวกเสาร์นี้ช่วงเช้าครับ",
+        "created_at": "2026-04-15T08:58:00.000Z"
+      },
+      {
+        "id": "mock-msg-012",
+        "role": "assistant",
+        "message_text": "รับทราบครับ ข้อมูลเบื้องต้นของงานย้ายแอร์ครบแล้ว เดี๋ยวระบบส่งต่อให้ทีมแอดมินประเมินหน้างานและรายละเอียดต่อครับ",
+        "created_at": "2026-04-15T09:00:00.000Z"
+      }
+    ]
+  },
+  "mock-case-007": {
+    "serviceCase": {
+      "id": "mock-case-007",
+      "customer_id": "mock-customer-007",
+      "thread_id": "mock-thread-007",
+      "lead_status": "handed_off",
+      "service_type": "other",
+      "ai_confidence": 0.38,
+      "summary": "ลูกค้าถามเงื่อนไขงานแบบกว้างและข้อมูลไม่ชัด ระบบจึงจัดเป็น low-confidence handoff",
+      "handoff_reason": "low_confidence_or_policy_limit",
+      "admin_summary": "ข้อความลูกค้าไม่ชัดเจนทั้งประเภทงานและขอบเขตบริการ แนะนำให้แอดมินรับช่วงต่อเพื่อคัดกรองใหม่",
+      "updated_at": "2026-04-15T11:25:00.000Z",
+      "missing_fields": ["area", "service_type", "preferred_date"],
+      "extracted_fields": {
+        "customer_name": "ไม่ระบุชื่อ",
+        "urgency": "medium"
+      },
+      "customers": {
+        "display_name": "ผู้สอบถามทั่วไป",
+        "phone": null
+      },
+      "admin_handoffs": [
+        {
+          "id": "mock-handoff-007",
+          "handoff_reason": "low_confidence_or_policy_limit",
+          "status": "pending"
+        }
+      ]
+    },
+    "messages": [
+      {
+        "id": "mock-msg-013",
+        "role": "customer",
+        "message_text": "งานแบบนี้พอทำได้ไหม ขอรายละเอียดรวม ๆ ก่อน",
+        "created_at": "2026-04-15T11:20:00.000Z"
+      },
+      {
+        "id": "mock-msg-014",
+        "role": "assistant",
+        "message_text": "ขออนุญาตให้เจ้าหน้าที่ช่วยรับช่วงต่อเพื่อดูรายละเอียดให้ตรงความต้องการนะครับ",
+        "created_at": "2026-04-15T11:22:00.000Z"
+      }
+    ]
+  }
+}

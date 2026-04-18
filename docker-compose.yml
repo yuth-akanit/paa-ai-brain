@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ai-brain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paa-ai-brain
+    restart: always
+    ports:
+      - "3011:3000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

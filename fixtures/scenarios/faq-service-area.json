@@ -1,0 +1,33 @@
+{
+  "name": "faq_service_area_basic",
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s002",
+      "display_name": "วิทยา"
+    },
+    "message": "อยู่บางนา รับงานไหมครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "faq_service_area",
+    "should_handoff": false,
+    "missing_fields": [],
+    "extracted_fields": {
+      "area": "บางนา"
+    },
+    "customer_reply_includes": ["หากแจ้งเขตหรือจังหวัดได้", "เช็กให้อีกครั้ง"],
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-004"],
+    "policy_scope": ["ask_for_area_details", "no_service_promise"],
+    "allowed_answer_types": ["service_area_info", "location_request"],
+    "forbidden_answer_types": ["confirm_service_availability"]
+  }
+}

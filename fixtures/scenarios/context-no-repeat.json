@@ -1,0 +1,31 @@
+{
+  "name": "context_no_repeat_customer_name",
+  "tags": ["context", "critical"],
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s015",
+      "display_name": "สุภาพร"
+    },
+    "message": "วันเสาร์ได้ไหมครับ",
+    "prior_case_state": {
+      "extracted_fields": {
+        "customer_name": "สุภาพร",
+        "phone": "0812345678",
+        "service_type": "cleaning"
+      }
+    }
+  },
+  "expected": {
+    "intent": "scheduling_request",
+    "should_handoff": false,
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "policy_scope": ["collect_missing_fields_only"],
+    "forbidden_answer_types": ["ask_customer_name", "ask_phone"]
+  }
+}

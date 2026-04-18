@@ -1,0 +1,28 @@
+{
+  "name": "booking_intent_cleaning",
+  "tags": ["booking", "critical"],
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s010",
+      "display_name": "สมชาย"
+    },
+    "message": "จะจองล้างแอร์ครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ชื่อ"],
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "policy_scope": ["collect_booking_info"],
+    "forbidden_answer_types": ["price_info"]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "inspection_request_basic",
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s003",
+      "display_name": "สมชาย"
+    },
+    "message": "ขอช่างเข้าตรวจเช็คหน้างาน พรุ่งนี้เช้า แถวบางนา",
+    "prior_case_state": {
+      "extracted_fields": {
+        "customer_name": "สมชาย"
+      }
+    }
+  },
+  "expected": {
+    "intent": "inspection_request",
+    "should_handoff": false,
+    "missing_fields": [],
+    "extracted_fields": {
+      "area": "บางนา",
+      "preferred_date": "พรุ่งนี้เช้า",
+      "service_type": "inspection"
+    },
+    "customer_reply_equals": "รับทราบครับ เดี๋ยวผมช่วยตรวจสอบข้อมูลให้",
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-002", "mock-knowledge-004"],
+    "policy_scope": ["mention_inspection_fee", "collect_location"],
+    "allowed_answer_types": ["inspection_fee_info", "location_request"],
+    "forbidden_answer_types": ["booking_confirmation"]
+  }
+}

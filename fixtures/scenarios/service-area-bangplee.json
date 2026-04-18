@@ -1,0 +1,28 @@
+{
+  "name": "service_area_bangplee",
+  "tags": ["faq", "service_area"],
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s013",
+      "display_name": "วิไล"
+    },
+    "message": "บางพลีรับไหมครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "faq_service_area",
+    "should_handoff": false,
+    "missing_fields": [],
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "policy_scope": ["service_area_info"],
+    "forbidden_answer_types": ["price_info"]
+  }
+}

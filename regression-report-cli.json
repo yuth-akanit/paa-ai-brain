@@ -1,0 +1,728 @@
+{
+  "metadata": {
+    "schemaVersion": "1.2.0",
+    "generatedAt": "2026-04-16T08:43:52.672Z",
+    "generatedBy": "root",
+    "environment": "local",
+    "notes": "CLI run",
+    "gateProfile": "balanced",
+    "scenarioCount": 8,
+    "catalogVersion": "2026-04-16",
+    "catalogFingerprint": "sha-560bfbe4"
+  },
+  "total": 8,
+  "passed": 8,
+  "failed": 0,
+  "intentMismatches": 0,
+  "handoffMismatches": 0,
+  "tagStats": {
+    "faq": {
+      "total": 1,
+      "passed": 1
+    },
+    "pricing": {
+      "total": 1,
+      "passed": 1
+    },
+    "untagged": {
+      "total": 6,
+      "passed": 6
+    },
+    "commercial": {
+      "total": 1,
+      "passed": 1
+    },
+    "handoff": {
+      "total": 1,
+      "passed": 1
+    },
+    "critical": {
+      "total": 1,
+      "passed": 1
+    }
+  },
+  "results": [
+    {
+      "scenarioName": "faq_price_basic",
+      "tags": [
+        "faq",
+        "pricing"
+      ],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "match",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s001",
+          "display_name": "นัท"
+        },
+        "detected_intent": "faq_pricing",
+        "extracted_fields": {
+          "service_type": "cleaning",
+          "machine_count": 1
+        },
+        "missing_fields": [],
+        "should_handoff": false,
+        "customer_reply": "ล้างแอร์ติดผนังเริ่มต้น 700 บาท/เครื่องครับ หากมี 2 เครื่องขึ้นไป เริ่มต้น 600 บาท/เครื่อง\n\nหากสะดวก แจ้งจำนวนเครื่อง ขนาด BTU หรือพื้นที่ได้ครับ เดี๋ยวช่วยประเมินเบื้องต้นให้ต่อ",
+        "confidence": 0.95,
+        "knowledge_hits": [
+          {
+            "id": "mock-knowledge-001",
+            "title": "ราคาล้างแอร์ปี 2026",
+            "content": "ราคาล้างแอร์อ้างอิงปี 2026 สำหรับแอร์ติดผนังเริ่มต้นประมาณ 700-1,000 บาทต่อเครื่องตามขนาด BTU ส่วนแอร์แขวน ตั้งพื้น 4 ทิศทาง และแอร์ตู้ตั้งจะมีราคาเริ่มต้นสูงกว่า การตอบลูกค้าต้องแจ้งว่าเป็นราคาเบื้องต้นและราคาจริงขึ้นกับรุ่น ขนาดเครื่อง ความสกปรก และพื้นที่หน้างาน",
+            "category": "faq",
+            "tags": [
+              "ราคา",
+              "ล้างแอร์",
+              "2026",
+              "faq"
+            ],
+            "score": 2
+          },
+          {
+            "id": "mock-knowledge-002",
+            "title": "ค่าตรวจเช็กและนโยบายประเมินหน้างาน",
+            "content": "ค่าตรวจเช็กหรือประเมินหน้างานอ้างอิงเริ่มต้น 1,000 บาทในกรณีเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินการต่อ หากลูกค้าต้องการยืนยันตัวเลขที่แน่นอน ระบบควรเก็บข้อมูลพื้นที่และลักษณะงานก่อนส่งต่อแอดมิน ไม่ควรให้ AI ยืนยันราคาเองเกินข้อมูลใน pricing_rules",
+            "category": "policy",
+            "tags": [
+              "inspection",
+              "policy",
+              "ค่าตรวจ",
+              "ประเมินหน้างาน"
+            ],
+            "score": 2
+          }
+        ],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": null,
+        "trace": [
+          "1. Input received: \"ล้างแอร์ราคาเท่าไหร่ 1 เครื่องครับ\"",
+          "2. Extracted fields: service_type, machine_count",
+          "3. Classified intent: faq_pricing (confidence: 0.95)",
+          "4. Search knowledge: found 2 items",
+          "5. AI Decision: should_handoff=false, reply_length=178",
+          "6. Final logic applied: policy_status=not_required"
+        ],
+        "admin_summary": {
+          "reason": "not_required",
+          "recommended_next_action": "continue_ai_collection",
+          "summary": "สรุปข้อความล่าสุด: ล้างแอร์ราคาเท่าไหร่ 1 เครื่องครับ"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "faq_service_area_basic",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "match",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s002",
+          "display_name": "วิทยา"
+        },
+        "detected_intent": "faq_service_area",
+        "extracted_fields": {
+          "area": "บางนา"
+        },
+        "missing_fields": [],
+        "should_handoff": false,
+        "customer_reply": "ทางเรารับงานตามพื้นที่ที่ระบุไว้ในระบบครับ หากแจ้งเขตหรือจังหวัดได้ ผมจะช่วยเช็กให้อีกครั้งครับ",
+        "confidence": 0.9,
+        "knowledge_hits": [],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": null,
+        "trace": [
+          "1. Input received: \"อยู่บางนา รับงานไหมครับ\"",
+          "2. Extracted fields: area",
+          "3. Classified intent: faq_service_area (confidence: 0.9)",
+          "4. Search knowledge: found 0 items",
+          "5. AI Decision: should_handoff=false, reply_length=95",
+          "6. Final logic applied: policy_status=not_required"
+        ],
+        "admin_summary": {
+          "reason": "not_required",
+          "recommended_next_action": "continue_ai_collection",
+          "summary": "สรุปข้อความล่าสุด: อยู่บางนา รับงานไหมครับ"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "inspection_request_basic",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "match",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s003",
+          "display_name": "สมชาย"
+        },
+        "detected_intent": "inspection_request",
+        "extracted_fields": {
+          "customer_name": "สมชาย",
+          "area": "บางนา",
+          "service_type": "inspection",
+          "preferred_date": "พรุ่งนี้เช้า",
+          "urgency": "medium"
+        },
+        "missing_fields": [],
+        "should_handoff": false,
+        "customer_reply": "รับทราบครับ เดี๋ยวผมช่วยตรวจสอบข้อมูลให้",
+        "confidence": 0.9,
+        "knowledge_hits": [],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": null,
+        "trace": [
+          "1. Input received: \"ขอช่างเข้าตรวจเช็คหน้างาน พรุ่งนี้เช้า แถวบางนา\"",
+          "2. Extracted fields: customer_name, area, service_type, preferred_date, urgency",
+          "3. Classified intent: inspection_request (confidence: 0.9)",
+          "4. Search knowledge: found 0 items",
+          "5. AI Decision: should_handoff=false, reply_length=40",
+          "6. Final logic applied: policy_status=not_required"
+        ],
+        "admin_summary": {
+          "reason": "not_required",
+          "recommended_next_action": "continue_ai_collection",
+          "summary": "สรุปข้อความล่าสุด: ขอช่างเข้าตรวจเช็คหน้างาน พรุ่งนี้เช้า แถวบางนา"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "relocation_request_basic",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "match",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s004",
+          "display_name": "พีท"
+        },
+        "detected_intent": "relocation_request",
+        "extracted_fields": {
+          "area": "รังสิต",
+          "service_type": "relocation",
+          "machine_count": 1,
+          "preferred_date": "ช่วงเช้า"
+        },
+        "missing_fields": [],
+        "should_handoff": false,
+        "customer_reply": "รับทราบครับ เดี๋ยวผมช่วยตรวจสอบข้อมูลให้",
+        "confidence": 0.9,
+        "knowledge_hits": [
+          {
+            "id": "mock-knowledge-001",
+            "title": "ราคาล้างแอร์ปี 2026",
+            "content": "ราคาล้างแอร์อ้างอิงปี 2026 สำหรับแอร์ติดผนังเริ่มต้นประมาณ 700-1,000 บาทต่อเครื่องตามขนาด BTU ส่วนแอร์แขวน ตั้งพื้น 4 ทิศทาง และแอร์ตู้ตั้งจะมีราคาเริ่มต้นสูงกว่า การตอบลูกค้าต้องแจ้งว่าเป็นราคาเบื้องต้นและราคาจริงขึ้นกับรุ่น ขนาดเครื่อง ความสกปรก และพื้นที่หน้างาน",
+            "category": "faq",
+            "tags": [
+              "ราคา",
+              "ล้างแอร์",
+              "2026",
+              "faq"
+            ],
+            "score": 2
+          },
+          {
+            "id": "mock-knowledge-002",
+            "title": "ค่าตรวจเช็กและนโยบายประเมินหน้างาน",
+            "content": "ค่าตรวจเช็กหรือประเมินหน้างานอ้างอิงเริ่มต้น 1,000 บาทในกรณีเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินการต่อ หากลูกค้าต้องการยืนยันตัวเลขที่แน่นอน ระบบควรเก็บข้อมูลพื้นที่และลักษณะงานก่อนส่งต่อแอดมิน ไม่ควรให้ AI ยืนยันราคาเองเกินข้อมูลใน pricing_rules",
+            "category": "policy",
+            "tags": [
+              "inspection",
+              "policy",
+              "ค่าตรวจ",
+              "ประเมินหน้างาน"
+            ],
+            "score": 2
+          }
+        ],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": null,
+        "trace": [
+          "1. Input received: \"อยากย้ายแอร์ 1 เครื่องไปบ้านใหม่แถวรังสิต สะดวกเสาร์นี้ช่วงเช้าครับ\"",
+          "2. Extracted fields: area, service_type, machine_count, preferred_date",
+          "3. Classified intent: relocation_request (confidence: 0.9)",
+          "4. Search knowledge: found 2 items",
+          "5. AI Decision: should_handoff=false, reply_length=40",
+          "6. Final logic applied: policy_status=not_required"
+        ],
+        "admin_summary": {
+          "reason": "not_required",
+          "recommended_next_action": "continue_ai_collection",
+          "summary": "สรุปข้อความล่าสุด: อยากย้ายแอร์ 1 เครื่องไปบ้านใหม่แถวรังสิต สะดวกเสาร์นี้ช่วงเช้าครับ"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "repair_request_basic",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "match",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s005",
+          "display_name": "สมชาย"
+        },
+        "detected_intent": "repair_request",
+        "extracted_fields": {
+          "customer_name": "สมชาย",
+          "area": "บางพลี",
+          "service_type": "repair",
+          "machine_count": 2,
+          "symptoms": "แอร์ไม่เย็น 2 เครื่อง อยู่บางพลี ขอช่างเข้าตรวจพรุ่งนี้ช่วงบ่ายครับ",
+          "preferred_date": "พรุ่งนี้ช่วงบ่าย",
+          "urgency": "medium"
+        },
+        "missing_fields": [],
+        "should_handoff": false,
+        "customer_reply": "รับทราบครับ เดี๋ยวผมช่วยตรวจสอบข้อมูลให้",
+        "confidence": 0.9,
+        "knowledge_hits": [
+          {
+            "id": "mock-knowledge-001",
+            "title": "ราคาล้างแอร์ปี 2026",
+            "content": "ราคาล้างแอร์อ้างอิงปี 2026 สำหรับแอร์ติดผนังเริ่มต้นประมาณ 700-1,000 บาทต่อเครื่องตามขนาด BTU ส่วนแอร์แขวน ตั้งพื้น 4 ทิศทาง และแอร์ตู้ตั้งจะมีราคาเริ่มต้นสูงกว่า การตอบลูกค้าต้องแจ้งว่าเป็นราคาเบื้องต้นและราคาจริงขึ้นกับรุ่น ขนาดเครื่อง ความสกปรก และพื้นที่หน้างาน",
+            "category": "faq",
+            "tags": [
+              "ราคา",
+              "ล้างแอร์",
+              "2026",
+              "faq"
+            ],
+            "score": 7
+          },
+          {
+            "id": "mock-knowledge-003",
+            "title": "มาตรฐานการล้างแอร์ทั่วไป",
+            "content": "มาตรฐานงานล้างแอร์ทั่วไปประกอบด้วยการตรวจสภาพเครื่องเบื้องต้น ตัดระบบไฟฟ้า ถอดแผ่นกรองและชิ้นส่วน ป้องกันแผงวงจร ฉีดล้างคอยล์เย็น ล้างท่อน้ำทิ้ง ล้างคอยล์ร้อน ประกอบกลับ และทดสอบการทำงานหลังล้างทุกครั้ง",
+            "category": "service_procedure",
+            "tags": [
+              "ขั้นตอนบริการ",
+              "ล้างแอร์",
+              "standard cleaning"
+            ],
+            "score": 2
+          }
+        ],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": null,
+        "trace": [
+          "1. Input received: \"แอร์ไม่เย็น 2 เครื่อง อยู่บางพลี ขอช่างเข้าตรวจพรุ่งนี้ช่วงบ่ายครับ\"",
+          "2. Extracted fields: customer_name, area, service_type, machine_count, symptoms, preferred_date, urgency",
+          "3. Classified intent: repair_request (confidence: 0.9)",
+          "4. Search knowledge: found 2 items",
+          "5. AI Decision: should_handoff=false, reply_length=40",
+          "6. Final logic applied: policy_status=not_required"
+        ],
+        "admin_summary": {
+          "reason": "not_required",
+          "recommended_next_action": "continue_ai_collection",
+          "summary": "สรุปข้อความล่าสุด: แอร์ไม่เย็น 2 เครื่อง อยู่บางพลี ขอช่างเข้าตรวจพรุ่งนี้ช่วงบ่ายครับ"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "cold_room_request_handoff",
+      "tags": [
+        "commercial",
+        "handoff",
+        "critical"
+      ],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "none",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s006",
+          "display_name": "อารีย์"
+        },
+        "detected_intent": "cold_room_request",
+        "extracted_fields": {
+          "area": "ชลบุรี",
+          "service_type": "cold_room",
+          "urgency": "high"
+        },
+        "missing_fields": [],
+        "should_handoff": true,
+        "customer_reply": "เคสนี้เป็นงานเฉพาะทาง เดี๋ยวเจ้าหน้าที่ประสานกลับเพื่อประเมินหน้างานครับ",
+        "confidence": 0.9,
+        "knowledge_hits": [],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": "complex_specialized_case",
+        "trace": [
+          "1. Input received: \"มีปัญหาห้องเย็นของโรงงาน อุณหภูมิไม่นิ่ง ต้องการให้เข้าดูด่วน\"",
+          "2. Extracted fields: area, service_type, urgency",
+          "3. Classified intent: cold_room_request (confidence: 0.9)",
+          "4. Search knowledge: found 0 items",
+          "5. AI Decision: should_handoff=true, reply_length=72",
+          "6. Final logic applied: policy_status=complex_specialized_case"
+        ],
+        "admin_summary": {
+          "reason": "complex_specialized_case",
+          "recommended_next_action": "admin_contact_and_schedule_site_visit",
+          "summary": "ลูกค้าสอบถามงาน cold room สำหรับโรงงาน ต้องให้แอดมินรับต่อ"
+        }
+      },
+      "severity": "critical",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "low_confidence_custom_question",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "none",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": null,
+        "detected_intent": "general_inquiry",
+        "extracted_fields": {},
+        "missing_fields": [],
+        "should_handoff": true,
+        "customer_reply": "รายละเอียดเคสนี้ต้องให้เจ้าหน้าที่ช่วยตรวจสอบต่อ เดี๋ยวแอดมินประสานกลับพร้อมข้อมูลที่เหมาะสมให้นะครับ",
+        "confidence": 0.38,
+        "knowledge_hits": [
+          {
+            "id": "mock-knowledge-001",
+            "title": "ราคาล้างแอร์ปี 2026",
+            "content": "ราคาล้างแอร์อ้างอิงปี 2026 สำหรับแอร์ติดผนังเริ่มต้นประมาณ 700-1,000 บาทต่อเครื่องตามขนาด BTU ส่วนแอร์แขวน ตั้งพื้น 4 ทิศทาง และแอร์ตู้ตั้งจะมีราคาเริ่มต้นสูงกว่า การตอบลูกค้าต้องแจ้งว่าเป็นราคาเบื้องต้นและราคาจริงขึ้นกับรุ่น ขนาดเครื่อง ความสกปรก และพื้นที่หน้างาน",
+            "category": "faq",
+            "tags": [
+              "ราคา",
+              "ล้างแอร์",
+              "2026",
+              "faq"
+            ],
+            "score": 2
+          },
+          {
+            "id": "mock-knowledge-002",
+            "title": "ค่าตรวจเช็กและนโยบายประเมินหน้างาน",
+            "content": "ค่าตรวจเช็กหรือประเมินหน้างานอ้างอิงเริ่มต้น 1,000 บาทในกรณีเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินการต่อ หากลูกค้าต้องการยืนยันตัวเลขที่แน่นอน ระบบควรเก็บข้อมูลพื้นที่และลักษณะงานก่อนส่งต่อแอดมิน ไม่ควรให้ AI ยืนยันราคาเองเกินข้อมูลใน pricing_rules",
+            "category": "policy",
+            "tags": [
+              "inspection",
+              "policy",
+              "ค่าตรวจ",
+              "ประเมินหน้างาน"
+            ],
+            "score": 2
+          },
+          {
+            "id": "mock-knowledge-003",
+            "title": "มาตรฐานการล้างแอร์ทั่วไป",
+            "content": "มาตรฐานงานล้างแอร์ทั่วไปประกอบด้วยการตรวจสภาพเครื่องเบื้องต้น ตัดระบบไฟฟ้า ถอดแผ่นกรองและชิ้นส่วน ป้องกันแผงวงจร ฉีดล้างคอยล์เย็น ล้างท่อน้ำทิ้ง ล้างคอยล์ร้อน ประกอบกลับ และทดสอบการทำงานหลังล้างทุกครั้ง",
+            "category": "service_procedure",
+            "tags": [
+              "ขั้นตอนบริการ",
+              "ล้างแอร์",
+              "standard cleaning"
+            ],
+            "score": 2
+          }
+        ],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": "low_confidence_or_policy_limit",
+        "trace": [
+          "1. Input received: \"ระบบ chiller กับ AHU อาคารสำนักงาน ถ้าจะประเมิน PM contract รายปีคิดยังไง\"",
+          "2. Extracted fields: none detected",
+          "3. Classified intent: general_inquiry (confidence: 0.38)",
+          "4. Search knowledge: found 3 items",
+          "5. AI Decision: should_handoff=true, reply_length=101",
+          "6. Final logic applied: policy_status=low_confidence_or_policy_limit"
+        ],
+        "admin_summary": {
+          "reason": "low_confidence_or_policy_limit",
+          "recommended_next_action": "admin_review_case",
+          "summary": "สรุปข้อความล่าสุด: ระบบ chiller กับ AHU อาคารสำนักงาน ถ้าจะประเมิน PM contract รายปีคิดยังไง"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    },
+    {
+      "scenarioName": "admin_direct_handoff_basic",
+      "tags": [],
+      "isPassed": true,
+      "intentMatch": true,
+      "handoffMatch": true,
+      "extractionStatus": "none",
+      "actual": {
+        "ok": true,
+        "mode": "dry-run",
+        "channel": "line",
+        "profile": {
+          "user_id": "mock-line-s007",
+          "display_name": "ลูกค้าที่ต้องการคุยคน"
+        },
+        "detected_intent": "admin_handoff",
+        "extracted_fields": {
+          "area": "หรือแอดมินได้เลย"
+        },
+        "missing_fields": [],
+        "should_handoff": true,
+        "customer_reply": "รายละเอียดเคสนี้ต้องให้เจ้าหน้าที่ช่วยตรวจสอบต่อ เดี๋ยวแอดมินประสานกลับพร้อมข้อมูลที่เหมาะสมให้นะครับ",
+        "confidence": 0.9,
+        "knowledge_hits": [],
+        "price_facts": [
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 9,000 BTU เริ่มต้น 700 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้น ขึ้นกับสภาพเครื่องและพื้นที่ให้บริการ"
+          },
+          {
+            "serviceCode": "cleaning",
+            "priceLabel": "ล้างแอร์ติดผนัง 12,000-13,000 BTU เริ่มต้น 800 บาท/เครื่อง",
+            "details": "ราคาเบื้องต้นสำหรับเครื่องขนาด 12,000-13,000 BTU"
+          },
+          {
+            "serviceCode": "inspection",
+            "priceLabel": "ค่าตรวจเช็กหรือประเมินหน้างานเริ่มต้น 1,000 บาท",
+            "details": "กรณีตรวจเช็กแล้วไม่ซ่อมหรือยังไม่ดำเนินงานต่อ"
+          },
+          {
+            "serviceCode": "repair",
+            "priceLabel": "ซ่อมรอยรั่วพร้อมทำ Vacuum และเติมน้ำยา เริ่มต้น 1,800 บาท",
+            "details": "ราคาเริ่มต้น ต้องตรวจจุดรั่วจริงก่อนยืนยัน"
+          }
+        ],
+        "handoff_reason": "customer_requested_human_agent",
+        "trace": [
+          "1. Input received: \"ขอคุยกับเจ้าหน้าที่หรือแอดมินได้เลยครับ\"",
+          "2. Extracted fields: area",
+          "3. Classified intent: admin_handoff (confidence: 0.9)",
+          "4. Search knowledge: found 0 items",
+          "5. AI Decision: should_handoff=true, reply_length=101",
+          "6. Final logic applied: policy_status=customer_requested_human_agent"
+        ],
+        "admin_summary": {
+          "reason": "customer_requested_human_agent",
+          "recommended_next_action": "admin_contact_customer",
+          "summary": "ลูกค้าร้องขอคุยกับเจ้าหน้าที่โดยตรง ควรให้แอดมินรับช่วงต่อทันที"
+        }
+      },
+      "severity": "normal",
+      "fieldMismatches": {
+        "high": false,
+        "normal": false
+      }
+    }
+  ],
+  "gateStatus": "PASS",
+  "gateReasons": [],
+  "profile": "balanced",
+  "gateContract": {
+    "status": "PASS",
+    "blockingIssueCount": 0,
+    "criticalRegressions": 0,
+    "newRegressions": 0
+  }
+}

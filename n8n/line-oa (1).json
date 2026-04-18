@@ -1,0 +1,3038 @@
+{
+  "name": "line-oa",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "event_type",
+              "value": "={{ $json.event_type || 'message' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "cmd",
+              "value": "={{ (() => { \n    const raw = String($json.cmd || '').trim(); \n    if (!raw) return null; \n    if (/^(MENU|ADMIN):/i.test(raw)) return raw; \n    return null; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "text",
+              "value": "={{ String($json.text || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "61b47b1d-522d-4a7a-b649-fe7e1ae7489c",
+      "name": "Normalize cmd",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12064,
+        9504
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ !!$json.cmd && /^(MENU|ADMIN):/i.test(String($json.cmd).trim()) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c0c27649-f37c-4ad3-80a2-869860b53d8c",
+      "name": "isCommand",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12288,
+        9504
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "account_key",
+              "value": "={{ $json.account_key }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "channel_platform_id",
+              "value": "={{ $json.channel_platform_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "platform_user_id",
+              "value": "={{ $json.line_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "event_type",
+              "value": "={{ $json.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "cmd",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-7",
+              "name": "reply_token",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-8",
+              "name": "timestamp",
+              "value": "={{ $json.ts }}",
+              "type": "number"
+            },
+            {
+              "id": "id-9",
+              "name": "raw",
+              "value": "={{ JSON.stringify($json.raw_event) }}",
+              "type": "object"
+            },
+            {
+              "id": "e6cfde32-c4a2-40a3-a918-1c1fd5e350f2",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3c432ad4-4600-4c80-bbed-cd070ec7a425",
+      "name": "Build Unified Inbox Payload (Plain Text)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        13856,
+        9696
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.INBOX_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "f97da263-f7c3-4bfc-b7fe-6c190e03e261",
+      "name": "Unified Inbox Ingest (Plain Text)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14080,
+        9696
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "806ef363-0159-4b94-99e0-32897293aa86",
+      "name": "LINE Webhook (POST) /webhook/line1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        11392,
+        9504
+      ],
+      "webhookId": "097b9de9-4c7f-497d-90da-0820ed0b213d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve OA by LINE webhook \"destination\"\nconst body = $json.body ?? $json;\nconst dest = String(body?.destination || '').trim();\n\n// ✅ map destination -> account_key + channel_platform_id\n// channel_platform_id = your internal id for OA (ex: 2007958198 / 2007779665)\nconst DEST_TO = {\n  \"U7ca0e85474df0c18189cd593a5d469c1\": { account_key: \"PAA Air\", channel_platform_id: \"2007958198\" }, // OA1\n  \"Ue0329c8bb058d3f3014b856a8b3c3dce\": { account_key: \"P&A Air\", channel_platform_id: \"2007779665\" }, // OA2\n};\n\nconst m = DEST_TO[dest];\nif (!m) {\n  return [{ json: { ok: false, error: \"unknown_destination\", destination: dest, body } }];\n}\n\nreturn [{\n  json: {\n    ...$json,\n    account_key: m.account_key,\n    channel_platform_id: m.channel_platform_id,\n  }\n}];"
+      },
+      "id": "804f3370-97a0-4a43-ae97-883dc99697fe",
+      "name": "Resolve OA (destination -> channel_platform_id)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11616,
+        9504
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Explode LINE body.events[] -> 1 item per event\nconst req = $json;\nconst body = req.body ?? req;\nconst events = Array.isArray(body?.events) ? body.events : [];\n\nreturn events.map((event) => {\n  const event_type = String(event?.type || '').toLowerCase();\n  const line_user_id = event?.source?.userId || null;\n  const reply_token = event?.replyToken || \"\";\n\n  // Rich menu can be:\n  // - message(text) via \"message\" action\n  // - postback via \"postback\" action\n  const text =\n    (event?.message?.type === 'text')\n      ? String(event?.message?.text || '').trim()\n      : '';\n\n  const postback_data = (event_type === 'postback')\n    ? String(event?.postback?.data || '').trim()\n    : '';\n\n  const cmd = String(postback_data || text || '').trim();\n\n  return {\n    json: {\n      account_key: req.account_key,\n      channel_platform_id: req.channel_platform_id,\n      event_type,\n      line_user_id,\n      reply_token,\n      text,\n      postback_data,\n      cmd,\n      ts: event?.timestamp || null,\n      raw_event: {\n        type: event?.type,\n        mode: event?.mode,\n        source: event?.source,\n        timestamp: event?.timestamp,\n        message: event?.message,\n        postback: event?.postback,\n      }\n    }\n  };\n});"
+      },
+      "id": "80cbb7a4-74bf-41a7-991a-66d005bc000b",
+      "name": "Explode Events1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11840,
+        9504
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa1",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bff950a9-36f8-4e55-9744-c56c18e2794b",
+      "name": "Route OA1 vs OA",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12512,
+        9408
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "ADMIN_TO",
+              "value": "C2993305f7ca45fa78bbb66abaf5e6901",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f042a7d2-428b-47b2-8c8c-6096e95ea47f",
+      "name": "Config OA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12736,
+        9312
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "ADMIN_TO",
+              "value": "U42b1d0791fbfc61b32d503d500d9165c",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d7511374-1bec-49c8-8b68-5f2f3ec7713c",
+      "name": "Config OA3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12736,
+        9536
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build replyPayload for Rich Menu commands (MENU:*)\nconst LIFF = String($json.LIFF_BOOK_URL || '').trim();\nconst replyToken = String($json.reply_token || '').trim();\nconst cmd = String($json.cmd || '').trim();\nconst headerColor = \"#06C755\";\n\nconst prices = [\n  { label: \"9,000 BTU\", price: \"700\" },\n  { label: \"12,000 - 13,000 BTU\", price: \"800\" },\n  { label: \"18,000 BTU\", price: \"900\" },\n  { label: \"24,000 BTU\", price: \"1,000\" },\n];\nconst addons = [\n  { item: \"น้ำยาฆ่าเชื้อ (ล้างคอยล์)\", price: \"+100\" },\n  { item: \"ระบบ Inverter\", price: \"+100\" },\n  { item: \"ตรวจเช็ค/ประเมินหน้างาน\", price: \"1,000+\", note: \"กรณีเช็คแล้วไม่ซ่อม\" },\n];\n\nconst postbackAction = (label, data) => ({ type: \"postback\", label, data });\n\nfunction genPriceFlex() {\n  const priceRows = prices.map((p) => ({\n    type: \"box\",\n    layout: \"horizontal\",\n    contents: [\n      { type: \"text\", text: p.label, size: \"sm\", color: \"#555555\", flex: 3 },\n      { type: \"text\", text: `${p.price}.-`, size: \"sm\", color: \"#111111\", weight: \"bold\", align: \"end\", flex: 1 },\n    ],\n    margin: \"md\",\n  }));\n\n  const addonRows = addons.flatMap((a) => {\n    const mainRow = {\n      type: \"box\",\n      layout: \"horizontal\",\n      contents: [\n        { type: \"text\", text: `🔧 ${a.item}`, size: \"xs\", color: \"#666666\", flex: 3, wrap: true },\n        { type: \"text\", text: a.price, size: \"xs\", color: \"#ff334b\", weight: \"bold\", align: \"end\", flex: 1, adjustMode: \"shrink-to-fit\" },\n      ],\n      margin: \"sm\",\n    };\n\n    if (!a.note) return [mainRow];\n\n    return [\n      mainRow,\n      { type: \"text\", text: a.note, size: \"xxs\", color: \"#999999\", margin: \"xs\", wrap: true }\n    ];\n  });\n\n  return {\n    type: \"flex\",\n    altText: \"ตารางราคาล้างแอร์ 2026\",\n    contents: {\n      type: \"bubble\",\n      size: \"mega\",\n      header: {\n        type: \"box\",\n        layout: \"vertical\",\n        backgroundColor: headerColor,\n        paddingAll: \"lg\",\n        contents: [\n          { type: \"text\", text: \"❄️ ราคาล้างแอร์ติดผนัง\", weight: \"bold\", color: \"#ffffff\", size: \"lg\" },\n          { type: \"text\", text: \"อัปเดตปี 2026\", color: \"#ffffffcc\", size: \"xs\", margin: \"xs\" },\n        ],\n      },\n      body: {\n        type: \"box\",\n        layout: \"vertical\",\n        contents: [\n          { type: \"text\", text: \"ราคาเริ่มต้น (ล้างปกติ)\", weight: \"bold\", size: \"md\", color: \"#333333\" },\n          { type: \"separator\", margin: \"md\", color: \"#eeeeee\" },\n          ...priceRows,\n          { type: \"separator\", margin: \"lg\", color: \"#eeeeee\" },\n          {\n            type: \"box\",\n            layout: \"vertical\",\n            margin: \"lg\",\n            backgroundColor: \"#f7f7f7\",\n            cornerRadius: \"md\",\n            paddingAll: \"md\",\n            contents: [\n              { type: \"text\", text: \"📌 บริการเสริม & เงื่อนไข\", size: \"xs\", weight: \"bold\", color: \"#333333\" },\n              ...addonRows,\n              { type: \"separator\", margin: \"md\", color: \"#e0e0e0\" },\n              { type: \"text\", text: \"🛡️ รับประกันน้ำหยดหลังล้าง 30 วัน\", size: \"xs\", color: headerColor, weight: \"bold\", align: \"center\", margin: \"md\" },\n            ],\n          },\n        ],\n      },\n      footer: {\n        type: \"box\",\n        layout: \"vertical\",\n        spacing: \"sm\",\n        contents: [\n          { type: \"button\", style: \"primary\", color: headerColor, action: { type: \"uri\", label: \"จองคิวทันที\", uri: LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\" } },\n          { type: \"button\", style: \"secondary\", action: postbackAction(\"คุยกับแอดมิน\", \"MENU:TALK_ADMIN\") },\n        ],\n      },\n    },\n  };\n}\n\nfunction adminGateMenu() {\n  return {\n    type: \"text\",\n    text: \"เลือกหัวข้อติดต่อแอดมินครับ 👇\",\n    quickReply: {\n      items: [\n        { type: \"action\", action: postbackAction(\"ติดตามงาน\", \"ADMIN:TRACK\") },\n        { type: \"action\", action: postbackAction(\"แจ้งปัญหา\", \"ADMIN:ISSUE\") },\n        { type: \"action\", action: postbackAction(\"อื่นๆ\", \"ADMIN:OTHER\") },\n      ],\n    },\n  };\n}\n\nfunction adminAck(reason) {\n  return { type: \"text\", text: `รับเรื่องแล้วครับ (${reason}) แอดมินจะติดต่อกลับให้เร็วที่สุด\\nพิมพ์รายละเอียดเพิ่มได้เลย (ชื่อ/เบอร์/เลขงาน/ที่อยู่)` };\n}\n\nfunction bookMsg() {\n  const link = LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\";\n  return { type: \"text\", text: `📅 จองคิวออนไลน์ได้ที่นี่ครับ\\n${link}` };\n}\n\nfunction askAiIntro() {\n  return {\n    type: \"text\",\n    text: \"สวัสดีครับ 👋\\nสอบถามเบื้องต้นได้เลย เช่น ราคา / พื้นที่บริการ / รับซ่อมไหม / ค่าตรวจเช็ค/ประเมินหน้างานเท่าไร\\nค่าตรวจเช็ค/ประเมินหน้างาน เริ่มต้น 1,000 บาท กรณีเช็กแล้วไม่ซ่อม\\nถ้าต้องการจองคิว ประเมินหน้างาน หรือตามงาน ผมจะส่งต่อแอดมินให้ครับ\"\n  };\n}\n\n// ✅ IMPORTANT: compute once, return once, always carry context\nlet route = \"IGNORE\";\nlet replyPayload = null;\nlet pushPayload = null;\n\nif (!replyToken) {\n  // no reply token → ignore (still carry context)\n  return [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];\n}\n\nif (cmd === \"MENU:PRICE_CLEAN\") {\n  route = \"PRICE_SHOW\";\n  \n  // ✅ ข้อความประกาศปรับราคา\n  const announcementText = {\n    type: \"text\",\n    text: \"📢 ประกาศแจ้งปรับราคาบริการล้างแอร์\\nเนื่องจากต้นทุนในการเดินทางและการให้บริการปรับตัวสูงขึ้น ทางบริษัทขอแจ้งปรับราคาเริ่มต้นของบริการล้างแอร์ ดังนี้\"\n  };\n\n  const followUpText = {\n    type: \"text\",\n    text: \"หลังดูราคาแล้ว ถ้าต้องการสอบถามเบื้องต้น พิมพ์ถามได้เลย หรือกด “ติดต่อแอดมิน” ได้ทันทีค่ะ\\nค่าตรวจเช็ค/ประเมินหน้างาน เริ่มต้น 1,000 บาท กรณีเช็คแล้วไม่ซ่อม\"\n  };\n\n  // ส่ง array ที่มีทั้ง [ประกาศ, FlexMessage, ข้อความ]\n  replyPayload = { replyToken, messages: [announcementText, genPriceFlex(), followUpText] };\n\n} else if (cmd === \"MENU:BOOK\") {\n  route = \"BOOK\";\n  replyPayload = { replyToken, messages: [bookMsg()] };\n} else if (cmd === \"MENU:ASK_AI\") {\n  route = \"ASK_AI\";\n  replyPayload = { replyToken, messages: [askAiIntro()] };\n} else if (cmd === \"MENU:TALK_ADMIN\") {\n  route = \"ADMIN_MENU\";\n  replyPayload = { replyToken, messages: [adminGateMenu()] };\n} else {\n  const m = cmd.match(/^ADMIN:(TRACK|ISSUE|OTHER)$/);\n  if (m) {\n    route = \"ADMIN_PUSH\";\n    const reasonMap = { TRACK: \"ติดตามงาน\", ISSUE: \"แจ้งปัญหา\", OTHER: \"อื่นๆ\" };\n    const reason = reasonMap[m[1]] || m[1];\n\n    replyPayload = { replyToken, messages: [adminAck(reason)] };\n\n    const adminTo = String($json.ADMIN_TO || \"\").trim();\n    if (adminTo) {\n      const who = String($json.line_user_id || $json.platform_user_id || \"unknown\");\n      pushPayload = {\n        to: adminTo,\n        messages: [\n          { type: \"text\", text: `🔔 ลูกค้าขอคุยแอดมิน\\nหัวข้อ: ${reason}\\nผู้ใช้: ${who}\\nOA: ${$json.account_key || \"-\"}\\nเวลา: ${new Date().toLocaleString('th-TH')}` }\n        ],\n      };\n    }\n  }\n}\n\nreturn [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];"
+      },
+      "id": "961536ee-1858-4a80-8a26-371c574e5c3b",
+      "name": "Build Rich Menu Reply (MENU:*)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12960,
+        9408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-reply",
+              "leftValue": "={{ $json.replyPayload }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "510802bd-fff4-47eb-a87d-e39ad7e2d844",
+      "name": "Has Reply Payload?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        13632,
+        9408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "699aab25-e7b2-48b6-965c-65688fa94a00",
+      "name": "Reply Route OA1 vs OA",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        13856,
+        9408
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "04760a6c-8aca-4ed5-ac0c-05c903b09d13",
+      "name": "LINE Reply (OA1 Credential)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14080,
+        9312
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a79fba72-d91a-4f9f-9605-1dfedfeb9c4b",
+      "name": "LINE Reply (OA2 Credential)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14080,
+        9504
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-push",
+              "leftValue": "={{ !!$json.pushPayload && !!$json.pushPayload.to && String($json.pushPayload.to).trim().length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "03c116e9-4b16-4b60-be58-8d7fed7170af",
+      "name": "Has Admin Push?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        13184,
+        9536
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.pushPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "fdb6c6d1-911b-4f40-95d6-a03585ad462a",
+      "name": "LINE Push Admin (OA1 Credential)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13408,
+        9536
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6b00d707-76db-40ba-9ffb-f454f89f01a0",
+      "name": "Respond ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        14304,
+        9504
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Detect if plain text message looks like a question\nconst text = String($json.text || '').trim();\nif (!text) return [{ json: { ...$json, isQuestion: false } }];\n\n// Simple heuristics for Thai questions\nconst questionPatterns = [\n  /\\?/,                          // has question mark\n  /^ราคา/,                        // starts with ราคา\n  /ราคาเท่าไร|ราคาเท่าไหร่/,\n  /เท่าไร|เท่าไหร่/,\n  /ได้ไหม|ได้มั้ย|ได้มั้ยค/,\n  /มั้ย|ไหม/,\n  /ยังไง|อย่างไร/,\n  /เมื่อไร|เมื่อไหร่|วันไหน/,\n  /กี่วัน|กี่ชั่วโมง|กี่โมง/,\n  /ทำไม|เพราะอะไร/,\n  /มีไหม|มีมั้ย/,\n  /รับไหม|รับมั้ย/,\n  /บริการ.*ไหม|บริการ.*มั้ย/,\n  /ซ่อม|ติดตั้ง|ล้าง|เติมน้ำยา/,\n  /แอร์.*เสีย|แอร์.*ไม่/,\n  /ไม่เย็น|ไม่ทำงาน|ไม่ติด/,\n  /how|what|when|where|why|which|can you|do you/i,\n];\n\nconst isQuestion = questionPatterns.some(p => p.test(text));\nreturn [{ json: { ...$json, isQuestion } }];"
+      },
+      "id": "75e3e195-de06-4f4c-862a-256284d509a9",
+      "name": "Detect Question?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12208,
+        10640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-q",
+              "leftValue": "={{ $json.isQuestion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f38d511e-ade0-4070-a5e6-c64c20a4a7a2",
+      "name": "Is Question?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12432,
+        10640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"claude-haiku-4-5-20251001\",\n  max_tokens: 300,\n  system: \"คุณคือผู้ช่วยลูกค้าของ PA Air Service บริษัทล้างแอร์ ซ่อมแอร์ ติดตั้งแอร์ ในย่านสมุทรปราการและบางนา\\nตอบคำถามเป็นภาษาไทย สุภาพ กระชับ ไม่เกิน 3 ประโยค\\nถ้าตอบไม่ได้หรือต้องการข้อมูลเพิ่ม ให้ตอบว่า HANDOFF เท่านั้น ไม่ต้องอธิบายเพิ่ม\\nข้อมูลบริษัท: ราคาล้างแอร์ 700-1,000 บาทตามขนาด, รับประกัน 30 วัน, โทร 085-0252102\",\n  messages: [{ role: \"user\", content: $json.text }]\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "95cd7334-9f1b-4447-963b-28c819583802",
+      "name": "Call Claude AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        11088,
+        11072
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOuJymHkJ8ZT1Hm7",
+          "name": "Claude API"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json;\nconst aiText = body?.content?.[0]?.text?.trim() || '';\n\n// If AI said HANDOFF or empty → handoff flag\nconst needsHandoff = !aiText || aiText === 'HANDOFF' || aiText.toUpperCase().startsWith('HANDOFF');\n\nreturn [{ json: { ...$('Is Question?').first().json, aiText, needsHandoff } }];"
+      },
+      "id": "9ec44e94-6794-4cd1-9f23-efdd83f0864a",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12880,
+        10704
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-handoff",
+              "leftValue": "={{ $json.needsHandoff }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "00baacd1-64d8-4b05-a5a0-92e7c6f0f169",
+      "name": "Need Handoff?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        13104,
+        10704
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const replyToken = String($json.reply_token || '').trim();\nif (!replyToken) return [{ json: { ...$json, replyPayload: null } }];\n\nconst replyPayload = {\n  replyToken,\n  messages: [{ type: \"text\", text: $json.aiText }]\n};\nreturn [{ json: { ...$json, replyPayload } }];"
+      },
+      "id": "72500bb6-9f70-429b-ae29-9f8784a78db2",
+      "name": "Build AI Reply Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13328,
+        10752
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1-ai",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2d8d941e-1286-43aa-8dc8-2f2839fe9e18",
+      "name": "AI Reply Route OA1 vs OA2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        13552,
+        10752
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "f00cd208-91f0-4b38-852e-80ae667eed4f",
+      "name": "LINE Reply AI (OA1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        10656
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "2b5b7788-04a7-403e-8611-59b824e0a551",
+      "name": "LINE Reply AI (OA2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        10848
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "event_type",
+              "value": "={{ $json.event_type || 'message' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "cmd",
+              "value": "={{ (() => { \n    const raw = String($json.cmd || '').trim(); \n    if (!raw) return null; \n    if (/^(MENU|ADMIN):/i.test(raw)) return raw; \n    return null; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "text",
+              "value": "={{ String($json.text || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d438d6b3-8c11-4545-92b2-a2117167f343",
+      "name": "Normalize cmd1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        11760,
+        10448
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ !!$json.cmd && /^(MENU|ADMIN):/i.test(String($json.cmd).trim()) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fdf21b29-139c-44c1-a784-16e3afd6dc3a",
+      "name": "isCommand1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        11984,
+        10448
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "account_key",
+              "value": "={{ $json.account_key }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "channel_platform_id",
+              "value": "={{ $json.channel_platform_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "platform_user_id",
+              "value": "={{ $json.line_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "event_type",
+              "value": "={{ $json.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "cmd",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-7",
+              "name": "reply_token",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-8",
+              "name": "timestamp",
+              "value": "={{ $json.ts }}",
+              "type": "number"
+            },
+            {
+              "id": "id-9",
+              "name": "raw",
+              "value": "={{ JSON.stringify($json.raw_event) }}",
+              "type": "object"
+            },
+            {
+              "id": "e6cfde32-c4a2-40a3-a918-1c1fd5e350f2",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c7d85fd8-2efb-4845-8298-34a6b650c005",
+      "name": "Build Unified Inbox Payload (Plain Text)1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        13328,
+        10464
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.INBOX_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "47bd2c29-164f-4d64-8a1f-077ce5ab725d",
+      "name": "Unified Inbox Ingest (Plain Text)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13552,
+        10464
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b7f27dec-a35b-4a2c-b9b9-2c284d416b39",
+      "name": "LINE Webhook (POST) /webhook/line",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        11088,
+        10448
+      ],
+      "webhookId": "097b9de9-4c7f-497d-90da-0820ed0b213d",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve OA by LINE webhook \"destination\"\nconst body = $json.body ?? $json;\nconst dest = String(body?.destination || '').trim();\n\n// ✅ map destination -> account_key + channel_platform_id\n// channel_platform_id = your internal id for OA (ex: 2007958198 / 2007779665)\nconst DEST_TO = {\n  \"U7ca0e85474df0c18189cd593a5d469c1\": { account_key: \"PAA Air\", channel_platform_id: \"2007958198\" }, // OA1\n  \"Ue0329c8bb058d3f3014b856a8b3c3dce\": { account_key: \"P&A Air\", channel_platform_id: \"2007779665\" }, // OA2\n};\n\nconst m = DEST_TO[dest];\nif (!m) {\n  return [{ json: { ok: false, error: \"unknown_destination\", destination: dest, body } }];\n}\n\nreturn [{\n  json: {\n    ...$json,\n    account_key: m.account_key,\n    channel_platform_id: m.channel_platform_id,\n  }\n}];"
+      },
+      "id": "0b5a2cd3-db68-475b-8e37-c6df5575110d",
+      "name": "Resolve OA (destination -> channel_platform_id)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11312,
+        10448
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Explode LINE body.events[] -> 1 item per event\nconst req = $json;\nconst body = req.body ?? req;\nconst events = Array.isArray(body?.events) ? body.events : [];\n\nreturn events.map((event) => {\n  const event_type = String(event?.type || '').toLowerCase();\n  const line_user_id = event?.source?.userId || null;\n  const reply_token = event?.replyToken || \"\";\n\n  // Rich menu can be:\n  // - message(text) via \"message\" action\n  // - postback via \"postback\" action\n  const text =\n    (event?.message?.type === 'text')\n      ? String(event?.message?.text || '').trim()\n      : '';\n\n  const postback_data = (event_type === 'postback')\n    ? String(event?.postback?.data || '').trim()\n    : '';\n\n  const cmd = String(postback_data || text || '').trim();\n\n  return {\n    json: {\n      account_key: req.account_key,\n      channel_platform_id: req.channel_platform_id,\n      event_type,\n      line_user_id,\n      reply_token,\n      text,\n      postback_data,\n      cmd,\n      ts: event?.timestamp || null,\n      raw_event: {\n        type: event?.type,\n        mode: event?.mode,\n        source: event?.source,\n        timestamp: event?.timestamp,\n        message: event?.message,\n        postback: event?.postback,\n      }\n    }\n  };\n});"
+      },
+      "id": "3ff8585d-f27e-45c9-b983-43ce042367bb",
+      "name": "Explode Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        10448
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa1",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "95395711-3860-40b0-a52f-c56aa4e5af82",
+      "name": "Route OA1 vs OA1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12208,
+        10160
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "ADMIN_TO",
+              "value": "C2993305f7ca45fa78bbb66abaf5e6901",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "4085b238-7cc5-495c-9d92-070f0b311d7d",
+      "name": "Config OA1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12432,
+        10064
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "ADMIN_TO",
+              "value": "U42b1d0791fbfc61b32d503d500d9165c",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0ac6ae63-acba-4383-a4a6-f84107a1ad72",
+      "name": "Config OA4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12432,
+        10256
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build replyPayload for Rich Menu commands (MENU:*)\nconst LIFF = String($json.LIFF_BOOK_URL || '').trim();\nconst replyToken = String($json.reply_token || '').trim();\nconst cmd = String($json.cmd || '').trim();\nconst headerColor = \"#06C755\";\n\nconst prices = [\n  { label: \"9,000 BTU\", price: \"700\" },\n  { label: \"12,000 - 13,000 BTU\", price: \"800\" },\n  { label: \"18,000 BTU\", price: \"900\" },\n  { label: \"24,000 BTU\", price: \"1,000\" },\n];\nconst addons = [\n  { item: \"น้ำยาฆ่าเชื้อ (ล้างคอยล์)\", price: \"+100\" },\n  { item: \"ระบบ Inverter\", price: \"+100\" },\n  { item: \"ตรวจเช็ค/ประเมินหน้างาน\", price: \"1,000+\", note: \"กรณีเช็กแล้วไม่ซ่อม\" },\n];\n\nconst postbackAction = (label, data) => ({ type: \"postback\", label, data });\n\nfunction genPriceFlex() {\n  const priceRows = prices.map((p) => ({\n    type: \"box\",\n    layout: \"horizontal\",\n    contents: [\n      { type: \"text\", text: p.label, size: \"sm\", color: \"#555555\", flex: 3 },\n      { type: \"text\", text: `${p.price}.-`, size: \"sm\", color: \"#111111\", weight: \"bold\", align: \"end\", flex: 1 },\n    ],\n    margin: \"md\",\n  }));\n\n  const addonRows = addons.flatMap((a) => {\n    const mainRow = {\n      type: \"box\",\n      layout: \"horizontal\",\n      contents: [\n        { type: \"text\", text: `🔧 ${a.item}`, size: \"xs\", color: \"#666666\", flex: 3, wrap: true },\n        { type: \"text\", text: a.price, size: \"xs\", color: \"#ff334b\", weight: \"bold\", align: \"end\", flex: 1, adjustMode: \"shrink-to-fit\" },\n      ],\n      margin: \"sm\",\n    };\n\n    if (!a.note) return [mainRow];\n\n    return [\n      mainRow,\n      { type: \"text\", text: a.note, size: \"xxs\", color: \"#999999\", margin: \"xs\", wrap: true }\n    ];\n  });\n\n  return {\n    type: \"flex\",\n    altText: \"ตารางราคาล้างแอร์ 2026\",\n    contents: {\n      type: \"bubble\",\n      size: \"mega\",\n      header: {\n        type: \"box\",\n        layout: \"vertical\",\n        backgroundColor: headerColor,\n        paddingAll: \"lg\",\n        contents: [\n          { type: \"text\", text: \"❄️ ราคาล้างแอร์ติดผนัง\", weight: \"bold\", color: \"#ffffff\", size: \"lg\" },\n          { type: \"text\", text: \"อัปเดตปี 2026\", color: \"#ffffffcc\", size: \"xs\", margin: \"xs\" },\n        ],\n      },\n      body: {\n        type: \"box\",\n        layout: \"vertical\",\n        contents: [\n          { type: \"text\", text: \"ราคาเริ่มต้น (ล้างปกติ)\", weight: \"bold\", size: \"md\", color: \"#333333\" },\n          { type: \"separator\", margin: \"md\", color: \"#eeeeee\" },\n          ...priceRows,\n          { type: \"separator\", margin: \"lg\", color: \"#eeeeee\" },\n          {\n            type: \"box\",\n            layout: \"vertical\",\n            margin: \"lg\",\n            backgroundColor: \"#f7f7f7\",\n            cornerRadius: \"md\",\n            paddingAll: \"md\",\n            contents: [\n              { type: \"text\", text: \"📌 บริการเสริม & เงื่อนไข\", size: \"xs\", weight: \"bold\", color: \"#333333\" },\n              ...addonRows,\n              { type: \"separator\", margin: \"md\", color: \"#e0e0e0\" },\n              { type: \"text\", text: \"🛡️ รับประกันน้ำหยดหลังล้าง 30 วัน\", size: \"xs\", color: headerColor, weight: \"bold\", align: \"center\", margin: \"md\" },\n            ],\n          },\n        ],\n      },\n      footer: {\n        type: \"box\",\n        layout: \"vertical\",\n        spacing: \"sm\",\n        contents: [\n          { type: \"button\", style: \"primary\", color: headerColor, action: { type: \"uri\", label: \"จองคิวทันที\", uri: LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\" } },\n          { type: \"button\", style: \"secondary\", action: postbackAction(\"คุยกับแอดมิน\", \"MENU:TALK_ADMIN\") },\n        ],\n      },\n    },\n  };\n}\n\nfunction adminGateMenu() {\n  return {\n    type: \"text\",\n    text: \"เลือกหัวข้อติดต่อแอดมินครับ 👇\",\n    quickReply: {\n      items: [\n        { type: \"action\", action: postbackAction(\"ติดตามงาน\", \"ADMIN:TRACK\") },\n        { type: \"action\", action: postbackAction(\"แจ้งปัญหา\", \"ADMIN:ISSUE\") },\n        { type: \"action\", action: postbackAction(\"อื่นๆ\", \"ADMIN:OTHER\") },\n      ],\n    },\n  };\n}\n\nfunction adminAck(reason) {\n  return { type: \"text\", text: `รับเรื่องแล้วครับ (${reason}) แอดมินจะติดต่อกลับให้เร็วที่สุด\\nพิมพ์รายละเอียดเพิ่มได้เลย (ชื่อ/เบอร์/เลขงาน/ที่อยู่)` };\n}\n\nfunction bookMsg() {\n  const link = LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\";\n  return { type: \"text\", text: `📅 จองคิวออนไลน์ได้ที่นี่ครับ\\n${link}` };\n}\n\nfunction askAiIntro() {\n  return {\n    type: \"text\",\n    text: \"สวัสดีครับ 👋\\nสอบถามเบื้องต้นได้เลย เช่น ราคา / พื้นที่บริการ / รับซ่อมไหม / มีค่าตรวจเช็ค/ประเมินหน้างานไหม\\nถ้าต้องการจองคิว ประเมินหน้างาน หรือตามงาน ผมจะส่งต่อแอดมินให้ครับ\"\n  };\n}\n\n// ✅ IMPORTANT: compute once, return once, always carry context\nlet route = \"IGNORE\";\nlet replyPayload = null;\nlet pushPayload = null;\n\nif (!replyToken) {\n  // no reply token → ignore (still carry context)\n  return [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];\n}\n\nif (cmd === \"MENU:PRICE_CLEAN\") {\n  route = \"PRICE_SHOW\";\n  \n  // ✅ ข้อความประกาศปรับราคา\n  const announcementText = {\n    type: \"text\",\n    text: \"📢 ประกาศแจ้งปรับราคาบริการล้างแอร์\\n\\nเนื่องจากต้นทุนในการเดินทางและการให้บริการปรับตัวสูงขึ้น ทางบริษัทขอแจ้งปรับราคาเริ่มต้นของบริการล้างแอร์ ดังนี้\"\n  };\n\n  const followUpText = {\n    type: \"text\",\n    text: \"หลังดูราคาแล้ว ถ้าต้องการสอบถามเบื้องต้น พิมพ์ถามได้เลย หรือกด “ติดต่อแอดมิน” ได้ทันทีค่ะ\"\n  };\n\n  // ส่ง array ที่มีทั้ง [ประกาศ, FlexMessage, ข้อความ]\n  replyPayload = { replyToken, messages: [announcementText, genPriceFlex(), followUpText] };\n\n} else if (cmd === \"MENU:BOOK\") {\n  route = \"BOOK\";\n  replyPayload = { replyToken, messages: [bookMsg()] };\n} else if (cmd === \"MENU:ASK_AI\") {\n  route = \"ASK_AI\";\n  replyPayload = { replyToken, messages: [askAiIntro()] };\n} else if (cmd === \"MENU:TALK_ADMIN\") {\n  route = \"ADMIN_MENU\";\n  replyPayload = { replyToken, messages: [adminGateMenu()] };\n} else {\n  const m = cmd.match(/^ADMIN:(TRACK|ISSUE|OTHER)$/);\n  if (m) {\n    route = \"ADMIN_PUSH\";\n    const reasonMap = { TRACK: \"ติดตามงาน\", ISSUE: \"แจ้งปัญหา\", OTHER: \"อื่นๆ\" };\n    const reason = reasonMap[m[1]] || m[1];\n\n    replyPayload = { replyToken, messages: [adminAck(reason)] };\n\n    const adminTo = String($json.ADMIN_TO || \"\").trim();\n    if (adminTo) {\n      const who = String($json.line_user_id || $json.platform_user_id || \"unknown\");\n      pushPayload = {\n        to: adminTo,\n        messages: [\n          { type: \"text\", text: `🔔 ลูกค้าขอคุยแอดมิน\\nหัวข้อ: ${reason}\\nผู้ใช้: ${who}\\nOA: ${$json.account_key || \"-\"}\\nเวลา: ${new Date().toLocaleString('th-TH')}` }\n        ],\n      };\n    }\n  }\n}\n\nreturn [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];"
+      },
+      "id": "8bbaebb1-b3ec-4836-915e-550f77fd2757",
+      "name": "Build Rich Menu Reply (MENU:*)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12656,
+        10160
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-reply",
+              "leftValue": "={{ $json.replyPayload }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "6c228740-7f13-4be9-a873-b01d89504778",
+      "name": "Has Reply Payload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        13328,
+        10160
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "45681351-a034-49e4-9702-89d52657ee0c",
+      "name": "Reply Route OA1 vs OA1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        13552,
+        10160
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ee423451-8047-4007-a007-139e30e15a2b",
+      "name": "LINE Reply (OA1 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        10064
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "241fc0ab-cd78-438e-bb74-cdc61da9b6f9",
+      "name": "LINE Reply (OA2 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        10272
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-push",
+              "leftValue": "={{ !!$json.pushPayload && !!$json.pushPayload.to && String($json.pushPayload.to).trim().length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "48eb9706-8bc4-4ef1-8d47-86045d3cd751",
+      "name": "Has Admin Push?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        12880,
+        10272
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.pushPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "197f15f3-00bc-4fdc-86d6-2bbb3ac0ae8e",
+      "name": "LINE Push Admin (OA1 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13104,
+        10272
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "0f2accec-f24c-48fc-a138-3befeec9d84c",
+      "name": "Respond 1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        14000,
+        10464
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'gpt-4o-mini', max_tokens: 300, temperature: 0.5, messages: [{ role: 'system', content: 'คุณคือผู้ช่วยตอบคำถามธุรกิจ PAA Air / P&A Air ให้บริการล้างแอร์ติดผนัง ตอบภาษาไทย สั้น กระชับ เป็นมิตร ห้ามใช้ markdown\\n\\nข้อมูลธุรกิจ:\\n- ราคาล้างแอร์ติดผนัง: 9,000 BTU = 700 บาท, 12,000-13,000 BTU = 800 บาท, 18,000 BTU = 900 บาท, 24,000 BTU = 1,000 บาท\\n- บริการเสริม: น้ำยาฆ่าเชื้อ (ล้างคอยล์) +100 บาท, ระบบ Inverter +100 บาท\\n- รับประกันน้ำหยดหลังล้าง 30 วัน\\n- จองคิวออนไลน์: https://liff.line.me/2008445752-IZ9iXrPC\\n\\nกฎสำคัญ: ถ้าคำถามไม่เกี่ยวกับธุรกิจ หรือตอบไม่ได้ หรือต้องการข้อมูลเพิ่มเติมจากแอดมิน ให้ตอบว่า HANDOFF เพียงคำเดียวเท่านั้น ห้ามตอบอื่น' }, { role: 'user', content: $json.text }] } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "78aca5f9-320f-4280-a6e1-0157f66d2162",
+      "name": "Call OpenAI GPT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        12880,
+        11680
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "D7ElO5P4s9xjtGRb",
+          "name": "Admin API"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-ai-answer",
+              "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && String($json.choices[0].message.content || '').trim()) && String($json.choices[0].message.content).trim().toUpperCase() !== 'HANDOFF' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "f84e58db-76c9-415a-b5b0-d167d4d367ce",
+      "name": "AI Can Answer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        13104,
+        11680
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "event_type",
+              "value": "={{ $json.event_type || 'message' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "cmd",
+              "value": "={{ (() => { \n    const raw = String($json.cmd || '').trim(); \n    if (!raw) return null; \n    if (/^(MENU|ADMIN):/i.test(raw)) return raw; \n    return null; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "text",
+              "value": "={{ String($json.text || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "11eee518-357a-48e3-9f1c-a233264d6941",
+      "name": "Normalize cmd2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        11760,
+        11472
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ !!$json.cmd && /^(MENU|ADMIN):/i.test(String($json.cmd).trim()) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "de9cb76a-cae7-4c7f-b18f-e850f0c0ca6e",
+      "name": "isCommand2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        11984,
+        11472
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "account_key",
+              "value": "={{ $json.account_key }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "channel_platform_id",
+              "value": "={{ $json.channel_platform_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "platform_user_id",
+              "value": "={{ $json.line_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "event_type",
+              "value": "={{ $json.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "cmd",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-7",
+              "name": "reply_token",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-8",
+              "name": "timestamp",
+              "value": "={{ $json.ts }}",
+              "type": "number"
+            },
+            {
+              "id": "id-9",
+              "name": "raw",
+              "value": "={{ JSON.stringify($json.raw_event) }}",
+              "type": "object"
+            },
+            {
+              "id": "e6cfde32-c4a2-40a3-a918-1c1fd5e350f2",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5c0e944b-c507-4b99-9f1d-edbddf46aa5f",
+      "name": "Build Unified Inbox Payload (Plain Text)2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        13552,
+        11680
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.INBOX_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "832de8ea-65de-40f7-9011-0b95e6072cc1",
+      "name": "Unified Inbox Ingest (Plain Text)2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        11680
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c5652030-baea-428c-b0ef-7f6c18cd5966",
+      "name": "LINE Webhook (POST) /webhook/line2",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        11088,
+        11472
+      ],
+      "webhookId": "097b9de9-4c7f-497d-90da-0820ed0b213d",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve OA by LINE webhook \"destination\"\nconst body = $json.body ?? $json;\nconst dest = String(body?.destination || '').trim();\n\n// ✅ map destination -> account_key + channel_platform_id\n// channel_platform_id = your internal id for OA (ex: 2007958198 / 2007779665)\nconst DEST_TO = {\n  \"U7ca0e85474df0c18189cd593a5d469c1\": { account_key: \"PAA Air\", channel_platform_id: \"2007958198\" }, // OA1\n  \"Ue0329c8bb058d3f3014b856a8b3c3dce\": { account_key: \"P&A Air\", channel_platform_id: \"2007779665\" }, // OA2\n};\n\nconst m = DEST_TO[dest];\nif (!m) {\n  return [{ json: { ok: false, error: \"unknown_destination\", destination: dest, body } }];\n}\n\nreturn [{\n  json: {\n    ...$json,\n    account_key: m.account_key,\n    channel_platform_id: m.channel_platform_id,\n  }\n}];"
+      },
+      "id": "3c75438c-cfba-4049-83da-8bea2130f55c",
+      "name": "Resolve OA (destination -> channel_platform_id)2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11312,
+        11472
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Explode LINE body.events[] -> 1 item per event\nconst req = $json;\nconst body = req.body ?? req;\nconst events = Array.isArray(body?.events) ? body.events : [];\n\nreturn events.map((event) => {\n  const event_type = String(event?.type || '').toLowerCase();\n  const line_user_id = event?.source?.userId || null;\n  const reply_token = event?.replyToken || \"\";\n\n  // Rich menu can be:\n  // - message(text) via \"message\" action\n  // - postback via \"postback\" action\n  const text =\n    (event?.message?.type === 'text')\n      ? String(event?.message?.text || '').trim()\n      : '';\n\n  const postback_data = (event_type === 'postback')\n    ? String(event?.postback?.data || '').trim()\n    : '';\n\n  const cmd = String(postback_data || text || '').trim();\n\n  return {\n    json: {\n      account_key: req.account_key,\n      channel_platform_id: req.channel_platform_id,\n      event_type,\n      line_user_id,\n      reply_token,\n      text,\n      postback_data,\n      cmd,\n      ts: event?.timestamp || null,\n      raw_event: {\n        type: event?.type,\n        mode: event?.mode,\n        source: event?.source,\n        timestamp: event?.timestamp,\n        message: event?.message,\n        postback: event?.postback,\n      }\n    }\n  };\n});"
+      },
+      "id": "f1ede055-2cf1-4313-b549-ad47bcefb28c",
+      "name": "Explode Events2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        11472
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa1",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e7e76823-2f41-4b3b-a66c-8723dfe4034b",
+      "name": "Route OA1 vs OA2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12208,
+        11328
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "ADMIN_TO",
+              "value": "C2993305f7ca45fa78bbb66abaf5e6901",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0285713d-f87d-45bc-92a4-125fe5c01160",
+      "name": "Config OA2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12432,
+        11296
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "ADMIN_TO",
+              "value": "U42b1d0791fbfc61b32d503d500d9165c",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "e394b4dc-b95e-4213-9cf8-9868f85a01bf",
+      "name": "Config OA5",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12432,
+        11520
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build replyPayload for Rich Menu commands (MENU:*)\nconst LIFF = String($json.LIFF_BOOK_URL || '').trim();\nconst replyToken = String($json.reply_token || '').trim();\nconst cmd = String($json.cmd || '').trim();\nconst headerColor = \"#06C755\";\n\nconst prices = [\n  { label: \"9,000 BTU\", price: \"700\" },\n  { label: \"12,000 - 13,000 BTU\", price: \"800\" },\n  { label: \"18,000 BTU\", price: \"900\" },\n  { label: \"24,000 BTU\", price: \"1,000\" },\n];\nconst addons = [\n  { item: \"น้ำยาฆ่าเชื้อ (ล้างคอยล์)\", price: \"+100\" },\n  { item: \"ระบบ Inverter\", price: \"+100\" },\n  { item: \"ตรวจเช็ค/ประเมินหน้างาน\", price: \"1,000+\", note: \"กรณีเช็กแล้วไม่ซ่อม\" },\n];\n\nconst postbackAction = (label, data) => ({ type: \"postback\", label, data });\n\nfunction genPriceFlex() {\n  const priceRows = prices.map((p) => ({\n    type: \"box\",\n    layout: \"horizontal\",\n    contents: [\n      { type: \"text\", text: p.label, size: \"sm\", color: \"#555555\", flex: 3 },\n      { type: \"text\", text: `${p.price}.-`, size: \"sm\", color: \"#111111\", weight: \"bold\", align: \"end\", flex: 1 },\n    ],\n    margin: \"md\",\n  }));\n\n  const addonRows = addons.flatMap((a) => {\n    const mainRow = {\n      type: \"box\",\n      layout: \"horizontal\",\n      contents: [\n        { type: \"text\", text: `🔧 ${a.item}`, size: \"xs\", color: \"#666666\", flex: 3, wrap: true },\n        { type: \"text\", text: a.price, size: \"xs\", color: \"#ff334b\", weight: \"bold\", align: \"end\", flex: 1, adjustMode: \"shrink-to-fit\" },\n      ],\n      margin: \"sm\",\n    };\n\n    if (!a.note) return [mainRow];\n\n    return [\n      mainRow,\n      { type: \"text\", text: a.note, size: \"xxs\", color: \"#999999\", margin: \"xs\", wrap: true }\n    ];\n  });\n\n  return {\n    type: \"flex\",\n    altText: \"ตารางราคาล้างแอร์ 2026\",\n    contents: {\n      type: \"bubble\",\n      size: \"mega\",\n      header: {\n        type: \"box\",\n        layout: \"vertical\",\n        backgroundColor: headerColor,\n        paddingAll: \"lg\",\n        contents: [\n          { type: \"text\", text: \"❄️ ราคาล้างแอร์ติดผนัง\", weight: \"bold\", color: \"#ffffff\", size: \"lg\" },\n          { type: \"text\", text: \"อัปเดตปี 2026\", color: \"#ffffffcc\", size: \"xs\", margin: \"xs\" },\n        ],\n      },\n      body: {\n        type: \"box\",\n        layout: \"vertical\",\n        contents: [\n          { type: \"text\", text: \"ราคาเริ่มต้น (ล้างปกติ)\", weight: \"bold\", size: \"md\", color: \"#333333\" },\n          { type: \"separator\", margin: \"md\", color: \"#eeeeee\" },\n          ...priceRows,\n          { type: \"separator\", margin: \"lg\", color: \"#eeeeee\" },\n          {\n            type: \"box\",\n            layout: \"vertical\",\n            margin: \"lg\",\n            backgroundColor: \"#f7f7f7\",\n            cornerRadius: \"md\",\n            paddingAll: \"md\",\n            contents: [\n              { type: \"text\", text: \"📌 บริการเสริม & เงื่อนไข\", size: \"xs\", weight: \"bold\", color: \"#333333\" },\n              ...addonRows,\n              { type: \"separator\", margin: \"md\", color: \"#e0e0e0\" },\n              { type: \"text\", text: \"🛡️ รับประกันน้ำหยดหลังล้าง 30 วัน\", size: \"xs\", color: headerColor, weight: \"bold\", align: \"center\", margin: \"md\" },\n            ],\n          },\n        ],\n      },\n      footer: {\n        type: \"box\",\n        layout: \"vertical\",\n        spacing: \"sm\",\n        contents: [\n          { type: \"button\", style: \"primary\", color: headerColor, action: { type: \"uri\", label: \"จองคิวทันที\", uri: LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\" } },\n          { type: \"button\", style: \"secondary\", action: postbackAction(\"คุยกับแอดมิน\", \"MENU:TALK_ADMIN\") },\n        ],\n      },\n    },\n  };\n}\n\nfunction adminGateMenu() {\n  return {\n    type: \"text\",\n    text: \"เลือกหัวข้อติดต่อแอดมินครับ 👇\",\n    quickReply: {\n      items: [\n        { type: \"action\", action: postbackAction(\"ติดตามงาน\", \"ADMIN:TRACK\") },\n        { type: \"action\", action: postbackAction(\"แจ้งปัญหา\", \"ADMIN:ISSUE\") },\n        { type: \"action\", action: postbackAction(\"อื่นๆ\", \"ADMIN:OTHER\") },\n      ],\n    },\n  };\n}\n\nfunction adminAck(reason) {\n  return { type: \"text\", text: `รับเรื่องแล้วครับ (${reason}) แอดมินจะติดต่อกลับให้เร็วที่สุด\\nพิมพ์รายละเอียดเพิ่มได้เลย (ชื่อ/เบอร์/เลขงาน/ที่อยู่)` };\n}\n\nfunction bookMsg() {\n  const link = LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\";\n  return { type: \"text\", text: `📅 จองคิวออนไลน์ได้ที่นี่ครับ\\n${link}` };\n}\n\n// ✅ IMPORTANT: compute once, return once, always carry context\nlet route = \"IGNORE\";\nlet replyPayload = null;\nlet pushPayload = null;\n\nif (!replyToken) {\n  // no reply token → ignore (still carry context)\n  return [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];\n}\n\nif (cmd === \"MENU:PRICE_CLEAN\") {\n  route = \"PRICE_SHOW\";\n  \n  // ✅ ข้อความประกาศปรับราคา\n  const announcementText = {\n    type: \"text\",\n    text: \"📢 ประกาศแจ้งปรับราคาบริการล้างแอร์\\n\\nเนื่องจากต้นทุนในการเดินทางและการให้บริการปรับตัวสูงขึ้น ทางบริษัทขอแจ้งปรับราคาเริ่มต้นของบริการล้างแอร์ ดังนี้\"\n  };\n\n  const followUpText = {\n    type: \"text\",\n    text: \"หลังดูราคาแล้ว สนใจล้างแอร์วันไหน กด “จองคิวออนไลน์” ได้เลยนะคะ หรือทัก “ติดต่อแอดมิน” ได้ทันทีค่ะ\"\n  };\n\n  // ส่ง array ที่มีทั้ง [ประกาศ, FlexMessage, ข้อความ]\n  replyPayload = { replyToken, messages: [announcementText, genPriceFlex(), followUpText] };\n\n} else if (cmd === \"MENU:BOOK\") {\n  route = \"BOOK\";\n  replyPayload = { replyToken, messages: [bookMsg()] };\n} else if (cmd === \"MENU:TALK_ADMIN\") {\n  route = \"ADMIN_MENU\";\n  replyPayload = { replyToken, messages: [adminGateMenu()] };\n} else {\n  const m = cmd.match(/^ADMIN:(TRACK|ISSUE|OTHER)$/);\n  if (m) {\n    route = \"ADMIN_PUSH\";\n    const reasonMap = { TRACK: \"ติดตามงาน\", ISSUE: \"แจ้งปัญหา\", OTHER: \"อื่นๆ\" };\n    const reason = reasonMap[m[1]] || m[1];\n\n    replyPayload = { replyToken, messages: [adminAck(reason)] };\n\n    const adminTo = String($json.ADMIN_TO || \"\").trim();\n    if (adminTo) {\n      const who = String($json.line_user_id || $json.platform_user_id || \"unknown\");\n      pushPayload = {\n        to: adminTo,\n        messages: [\n          { type: \"text\", text: `🔔 ลูกค้าขอคุยแอดมิน\\nหัวข้อ: ${reason}\\nผู้ใช้: ${who}\\nOA: ${$json.account_key || \"-\"}\\nเวลา: ${new Date().toLocaleString('th-TH')}` }\n        ],\n      };\n    }\n  }\n}\n\nreturn [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];"
+      },
+      "id": "f6638d7d-16cd-421c-b963-f89c168a69af",
+      "name": "Build Rich Menu Reply (MENU:*)2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12656,
+        11328
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-reply",
+              "leftValue": "={{ $json.replyPayload }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "d2b6adf0-5825-4874-8b69-ad601576ba54",
+      "name": "Has Reply Payload?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        13328,
+        11328
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "63dcd4ed-22c6-4d16-8343-d7406a4195ba",
+      "name": "Reply Route OA1 vs OA2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        13552,
+        11392
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "0f3d2aca-30b0-4c65-880b-bd6e90041a95",
+      "name": "LINE Reply (OA1 Credential)2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        11296
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "21a76cbe-4c20-4b4a-b445-f9000d0fef7e",
+      "name": "LINE Reply (OA2 Credential)2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13776,
+        11488
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-push",
+              "leftValue": "={{ !!$json.pushPayload && !!$json.pushPayload.to && String($json.pushPayload.to).trim().length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fcc5aaf6-c2c1-44be-9b05-780d0c0154b3",
+      "name": "Has Admin Push?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        12880,
+        11488
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.pushPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "da9ceeda-8293-43fb-8e34-6aa38abf4256",
+      "name": "LINE Push Admin (OA1 Credential)2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13104,
+        11488
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "1d577ecf-c77e-43ea-a58d-d93213aafeb2",
+      "name": "Respond 2",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        14000,
+        11488
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get AI response text\nconst aiText = String($json.choices?.[0]?.message?.content || '').trim();\n\n// Retrieve original LINE event context via item linking\nconst orig = $('Normalize cmd2').item.json;\nconst replyToken = String(orig.reply_token || '').trim();\n\nconst replyPayload = replyToken\n  ? { replyToken, messages: [{ type: 'text', text: aiText }] }\n  : null;\n\nreturn [{ json: {\n  ...orig,\n  replyPayload,\n  pushPayload: null,\n} }];"
+      },
+      "id": "daf34cc8-1616-4dcb-855e-4cbbd68e9cb4",
+      "name": "Build AI Reply Payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13328,
+        11824
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'gpt-4o-mini', max_tokens: 300, temperature: 0.5, messages: [{ role: 'system', content: 'คุณคือผู้ช่วยตอบคำถามธุรกิจ PAA Air / P&A Air ให้บริการล้างแอร์ติดผนัง ตอบภาษาไทย สั้น กระชับ เป็นมิตร ห้ามใช้ markdown\\n\\nข้อมูลธุรกิจ:\\n- ราคาล้างแอร์ติดผนัง: 9,000 BTU = 700 บาท, 12,000-13,000 BTU = 800 บาท, 18,000 BTU = 900 บาท, 24,000 BTU = 1,000 บาท\\n- บริการเสริม: น้ำยาฆ่าเชื้อ (ล้างคอยล์) +100 บาท, ระบบ Inverter +100 บาท\\n- รับประกันน้ำหยดหลังล้าง 30 วัน\\n- จองคิวออนไลน์: https://liff.line.me/2008445752-IZ9iXrPC\\n\\nกฎสำคัญ: ถ้าคำถามไม่เกี่ยวกับธุรกิจ หรือตอบไม่ได้ หรือต้องการข้อมูลเพิ่มเติมจากแอดมิน ให้ตอบว่า HANDOFF เพียงคำเดียวเท่านั้น ห้ามตอบอื่น' }, { role: 'user', content: $json.text }] } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "7ef32567-02d2-4b8f-ac59-c05124de23ce",
+      "name": "Call OpenAI GPT1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        12656,
+        10704
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "D7ElO5P4s9xjtGRb",
+          "name": "Admin API"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {
+    "LINE Webhook (POST) /webhook/line": [
+      {
+        "json": {
+          "headers": {
+            "host": "admin.paaair.online",
+            "user-agent": "LineBotWebhook/2.0",
+            "content-length": "836",
+            "content-type": "application/json; charset=utf-8",
+            "via": "2.0 Caddy",
+            "x-forwarded-for": "147.92.149.169",
+            "x-forwarded-host": "admin.paaair.online",
+            "x-forwarded-proto": "https",
+            "x-line-signature": "zZnvh/QvrcpAnwx10HaSPX7bBoREfXYrX//vS5BJkQw=",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "destination": "U7ca0e85474df0c18189cd593a5d469c1",
+            "events": [
+              {
+                "type": "message",
+                "message": {
+                  "type": "text",
+                  "id": "607453006581203030",
+                  "quoteToken": "wJvyoxZPF_ZtdPGhZCgBDtHxVuIrWltFz6O-xX--kylB_WKvU7BAGECxJMBgLIpNZ-nYiHxHg1zMga3M84GSDfw89IllPrPYIk16oZGUFb0nkkcZHBLSeDFnoeGJknZOh5wvQTqlbZH5M2R9fz-38Q",
+                  "markAsReadToken": "Ks9A3DSDV7giF0yDXdbO3n5BX8_fDzIWvUaBdV38zzML57IwVYgXLui7SK45nnjH8mx-CGl7T1MAkIvYcKdIFyH_BVoRSIlpW4b-i05mQ2BKWzXCytMDGLEwuSo2bGWeI3sN0uUcDpAvsP-_WtvEqsR_TMDYfWMrkzXm28LBKQsbVKDVGW2-kfs6ibBNvgMZG94O2OQxLMDmq4zPywGtew",
+                  "text": "พรุ่งนี้ว่างไหม"
+                },
+                "webhookEventId": "01KN05ZH3DKQV9EC939YA6T2P7",
+                "deliveryContext": {
+                  "isRedelivery": false
+                },
+                "timestamp": 1774901510762,
+                "source": {
+                  "type": "user",
+                  "userId": "Uebccce75f1ba9d2ee3fa7495cca2bb6d"
+                },
+                "replyToken": "358b60285df14a25bf181ff632d10067",
+                "mode": "active"
+              }
+            ]
+          },
+          "webhookUrl": "https://admin.paaair.online/webhook/line",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Normalize cmd": {
+      "main": [
+        [
+          {
+            "node": "isCommand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isCommand": {
+      "main": [
+        [
+          {
+            "node": "Route OA1 vs OA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unified Inbox Payload (Plain Text)": {
+      "main": [
+        [
+          {
+            "node": "Unified Inbox Ingest (Plain Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Inbox Ingest (Plain Text)": {
+      "main": [
+        [
+          {
+            "node": "Respond ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Webhook (POST) /webhook/line1": {
+      "main": [
+        [
+          {
+            "node": "Resolve OA (destination -> channel_platform_id)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve OA (destination -> channel_platform_id)1": {
+      "main": [
+        [
+          {
+            "node": "Explode Events1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode Events1": {
+      "main": [
+        [
+          {
+            "node": "Normalize cmd",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA1 vs OA": {
+      "main": [
+        [
+          {
+            "node": "Config OA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Config OA3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA3": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Rich Menu Reply (MENU:*)1": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has Admin Push?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reply Payload?1": {
+      "main": [
+        [
+          {
+            "node": "Reply Route OA1 vs OA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Route OA1 vs OA": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply (OA1 Credential)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply (OA2 Credential)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA1 Credential)1": {
+      "main": [
+        [
+          {
+            "node": "Respond ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA2 Credential)1": {
+      "main": [
+        [
+          {
+            "node": "Respond ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Admin Push?1": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Admin (OA1 Credential)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Push Admin (OA1 Credential)1": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Question?": {
+      "main": [
+        [
+          {
+            "node": "Is Question?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Question?": {
+      "main": [
+        [
+          {
+            "node": "Call OpenAI GPT1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Need Handoff?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Handoff?": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Reply Payload": {
+      "main": [
+        [
+          {
+            "node": "AI Reply Route OA1 vs OA2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Reply Route OA1 vs OA2": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply AI (OA1)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply AI (OA2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply AI (OA1)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply AI (OA2)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize cmd1": {
+      "main": [
+        [
+          {
+            "node": "isCommand1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isCommand1": {
+      "main": [
+        [
+          {
+            "node": "Route OA1 vs OA1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Detect Question?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unified Inbox Payload (Plain Text)1": {
+      "main": [
+        [
+          {
+            "node": "Unified Inbox Ingest (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Inbox Ingest (Plain Text)1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Webhook (POST) /webhook/line": {
+      "main": [
+        [
+          {
+            "node": "Resolve OA (destination -> channel_platform_id)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve OA (destination -> channel_platform_id)": {
+      "main": [
+        [
+          {
+            "node": "Explode Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode Events": {
+      "main": [
+        [
+          {
+            "node": "Normalize cmd1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA1 vs OA1": {
+      "main": [
+        [
+          {
+            "node": "Config OA1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Config OA4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA1": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA4": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Rich Menu Reply (MENU:*)": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has Admin Push?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reply Payload?": {
+      "main": [
+        [
+          {
+            "node": "Reply Route OA1 vs OA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Route OA1 vs OA1": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply (OA1 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply (OA2 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA1 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA2 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Admin Push?": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Admin (OA1 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Push Admin (OA1 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call OpenAI GPT": {
+      "main": [
+        [
+          {
+            "node": "AI Can Answer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Can Answer?": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize cmd2": {
+      "main": [
+        [
+          {
+            "node": "isCommand2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isCommand2": {
+      "main": [
+        [
+          {
+            "node": "Route OA1 vs OA2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call OpenAI GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unified Inbox Payload (Plain Text)2": {
+      "main": [
+        [
+          {
+            "node": "Unified Inbox Ingest (Plain Text)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Inbox Ingest (Plain Text)2": {
+      "main": [
+        [
+          {
+            "node": "Respond 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Webhook (POST) /webhook/line2": {
+      "main": [
+        [
+          {
+            "node": "Resolve OA (destination -> channel_platform_id)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve OA (destination -> channel_platform_id)2": {
+      "main": [
+        [
+          {
+            "node": "Explode Events2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode Events2": {
+      "main": [
+        [
+          {
+            "node": "Normalize cmd2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA1 vs OA2": {
+      "main": [
+        [
+          {
+            "node": "Config OA2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Config OA5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA2": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA5": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Rich Menu Reply (MENU:*)2": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has Admin Push?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reply Payload?2": {
+      "main": [
+        [
+          {
+            "node": "Reply Route OA1 vs OA2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Route OA1 vs OA2": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply (OA1 Credential)2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply (OA2 Credential)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA1 Credential)2": {
+      "main": [
+        [
+          {
+            "node": "Respond 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA2 Credential)2": {
+      "main": [
+        [
+          {
+            "node": "Respond 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Admin Push?2": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Admin (OA1 Credential)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Push Admin (OA1 Credential)2": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Reply Payload1": {
+      "main": [
+        [
+          {
+            "node": "Reply Route OA1 vs OA2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call OpenAI GPT1": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "100b3a59-e7e8-4c3a-b38b-864f7adb9f0b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50b9398667fecef5231b900714a0997b8e87996f58727cad5427170a677b0267"
+  },
+  "id": "ZeUwV8NrEHkrxzzcyOWo6",
+  "tags": []
+}

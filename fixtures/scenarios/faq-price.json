@@ -1,0 +1,35 @@
+{
+  "name": "faq_price_basic",
+  "tags": ["faq", "pricing"],
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s001",
+      "display_name": "นัท"
+    },
+    "message": "ล้างแอร์ราคาเท่าไหร่ 1 เครื่องครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "faq_pricing",
+    "should_handoff": false,
+    "missing_fields": [],
+    "extracted_fields": {
+      "service_type": "cleaning",
+      "machine_count": 1
+    },
+    "customer_reply_includes": ["ข้อมูลราคาเบื้องต้น", "700 บาท/เครื่อง"],
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-001", "mock-knowledge-004"],
+    "policy_scope": ["knowledge_only", "no_price_invention", "no_booking_promise"],
+    "allowed_answer_types": ["price_info", "followup_question"],
+    "forbidden_answer_types": ["custom_discount", "fake_availability"]
+  }
+}

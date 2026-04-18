@@ -1,0 +1,29 @@
+{
+  "name": "closing_empty_reply",
+  "tags": ["closing"],
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s014",
+      "display_name": "อนันต์"
+    },
+    "message": "ขอบคุณครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "closing",
+    "should_handoff": false,
+    "missing_fields": [],
+    "customer_reply_includes": [],
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "policy_scope": ["closing_only"],
+    "forbidden_answer_types": ["price_info", "booking_request"]
+  }
+}

@@ -1,0 +1,941 @@
+{
+  "name": "line_runtime_inbound_v8_stable",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "045a0385-0324-4ad4-a917-82588db63e94",
+              "name": "NEXTJS_AI_RESPOND_URL",
+              "value": "https://brain.paaair.online/api/ai/respond",
+              "type": "string"
+            },
+            {
+              "id": "2f174bd7-9b73-4c3c-a1c5-3b6fd6cbc52c",
+              "name": "ADMIN_RUNTIME_HANDOFF_URL",
+              "value": "https://admin.paaair.online/webhook/admin_runtime_handoff",
+              "type": "string"
+            },
+            {
+              "id": "a64187d0-01ca-4f05-a57d-420e3eb9f797",
+              "name": "AI_GATEWAY_INTERNAL_KEY",
+              "value": "PAA_BRAIN_SECURE_98de237f",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "95cad58e-45d4-4fba-b90e-0de7a30ed1b7",
+      "name": "runtime_config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2208,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line_runtime_inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "053fad62-7a7f-4589-8690-27cc28aec442",
+      "name": "line_runtime_inbound",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1984,
+        3392
+      ],
+      "webhookId": "e5fade08-566c-4973-ac51-8a95e574ebb2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nif (!body || !Array.isArray(body.events) || body.events.length === 0) {\n  return [{ json: { ok: false, stage: 'extract_first_event', should_stop: true } }];\n}\nconst event = body.events[0];\nreturn [{ json: { ok: true, request_id: `rt_${Date.now()}`, received_at: new Date().toISOString(), event } }];"
+      },
+      "id": "2dceb417-069b-4f20-8a52-23753cb819b4",
+      "name": "extract_first_event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1109623b-7cc5-421f-a722-3982d75ac2c2",
+      "name": "has_valid_event",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2656,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.event.type }}",
+              "rightValue": "message",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.event.message?.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef7eefa3-7c22-4c86-bfc4-e09b4976fae6",
+      "name": "is_text_message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2880,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.event;\nreturn [{ json: {\n  request_id: $json.request_id,\n  received_at: $json.received_at,\n  line_context: { reply_token: event?.replyToken, user_id: event?.source?.userId, customer_message: event?.message?.text, message_id: event?.message?.id },\n  normalized_request: {\n    channel: 'line',\n    channelUserId: event?.source?.userId,\n    customerMessage: event?.message?.text,\n    sourceEvent: { replyToken: event?.replyToken, messageId: event?.message?.id, timestamp: event?.timestamp },\n    runtime: { requestId: $json.request_id, receivedAt: $json.received_at, mode: 'line_text_inbound' }\n  }\n}}];"
+      },
+      "id": "4d472743-c8e4-476a-a2d5-27843c8da309",
+      "name": "normalize_line_event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3104,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ !!$json.normalized_request.channelUserId }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8f3e942d-8f64-4b05-bb29-554266ecc4ac",
+      "name": "has_minimum_normalized_fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3328,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://paavpbzosxhggtfqvwcy.supabase.co/rest/v1/rpc/runtime_get_ai_gate_v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"p_channel\": $json.normalized_request.channel, \"p_channel_user_id\": $json.normalized_request.channelUserId } }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "c1476ef6-044a-4994-8c1c-6b7c4c23edbb",
+      "name": "runtime_get_ai_gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3552,
+        3392
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "JL683F3y5WQn5dTM",
+          "name": "SUPABASE_URL_PA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ดึงข้อมูล Input ดั้งเดิมที่ยังไม่ถูก HTTP Request วางทับ\nconst originalInput = $('has_minimum_normalized_fields').first().json;\nconst rpc = Array.isArray($json.data) ? $json.data[0] : ($json.data || $json);\n\nconst gate = {\n  found_thread: !!rpc?.thread_id,\n  thread_id: rpc?.thread_id || null,\n  case_id: rpc?.case_id || null,\n  thread_state: rpc?.thread_state || 'ai_active',\n  ai_blocked: !!rpc?.ai_blocked,\n  admin_active: !!rpc?.admin_active,\n  reason_code: rpc?.reason_code || 'no_open_thread',\n  should_call_ai: !(rpc?.ai_blocked === true)\n};\n\nconst humanOwned = gate.ai_blocked === true || [\"handed_off\", \"closed\"].includes(gate.thread_state);\nconst allowAi = !humanOwned;\n\n// ประกอบร่างใหม่ให้มี threadId แล้วนำไปส่งให้ AI ต่อไป\nconst normalized_request = { ...originalInput.normalized_request, threadId: gate.thread_id };\n\nreturn [{\n  json: {\n    ...originalInput,\n    normalized_request,\n    gate,\n    gate_decision: { allow_ai: allowAi, reason: humanOwned ? \"HUMAN_OWNED_BLOCK\" : \"AI_ALLOWED\" }\n  }\n}];\n"
+      },
+      "id": "569fa9f5-ffa2-4aaa-9385-3714df466977",
+      "name": "decide_gate_policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    route: 'skip_reply',\n    decision: { ok: true, recommended_action: 'skip_reply', customer_reply: '' },\n    admin_notify_payload: {\n      request_id: $json.request_id,\n      source: 'v7_final_skip',\n      customer_message: $json.line_context.customer_message,\n      reason: $json.gate_decision.reason,\n      summary: `AI silent (Handover Active) | Thread: ${$json.gate.thread_id}`,\n      thread_id: $json.gate.thread_id\n    }\n  }\n}];"
+      },
+      "id": "cb976dec-9929-4ea1-8aa0-197499ebf2fd",
+      "name": "build_skip_ai_payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5568,
+        3584
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('runtime_config').item.json.NEXTJS_AI_RESPOND_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-ai-gateway-key",
+              "value": "={{ $('runtime_config').item.json.AI_GATEWAY_INTERNAL_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.normalized_request }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8083b383-4fa2-4e3a-9bbb-7b42dad9eac2",
+      "name": "call_ai_respond",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4176,
+        3200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst input = $input.item.json;\nconst isValid = body && body.ok === true && ['reply_customer', 'handoff_admin', 'skip_reply'].includes(body.recommended_action);\nreturn [{ json: {\n  ...input,\n  route: isValid ? body.recommended_action : 'handoff_admin',\n  decision: isValid ? body : { ok: true, recommended_action: 'handoff_admin', customer_reply: '' }\n}}];"
+      },
+      "id": "54fb9ff1-e2f2-4895-b728-0e8f5e81b550",
+      "name": "parse_ai_response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4448,
+        3312
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "reply_customer",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "handoff_admin",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7dbf6a6b-39fd-411e-b767-0d28211e8ad5",
+      "name": "route_action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        4672,
+        3312
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const decision = $json.decision || {};\nconst replyText = decision.customer_reply?.trim() || '';\n\n// แก้จุดนี้: ถ้าใน $json ไม่มี ให้ไปควักมาจาก Node ต้นทางโดยตรงครับ\nconst lineCtx = $json.line_context || $node[\"normalize_line_event\"].json.line_context || {};\nconst requestId = $json.request_id || $node[\"normalize_line_event\"].json.request_id;\n\nreturn [{\n  json: {\n    request_id: requestId,\n    reply_api_payload: replyText ? { \n      replyToken: lineCtx.reply_token, \n      messages: [{ type: 'text', text: replyText }] \n    } : null,\n    admin_notify_payload: {\n      request_id: requestId,\n      source: 'v8_final_fix',\n      customer_message: lineCtx.customer_message,\n      intent: decision.intent,\n      summary: decision.admin_summary?.summary || 'AI detected handoff required'\n    }\n  }\n}];\n"
+      },
+      "id": "10fca47f-3bbc-4fb0-a9a3-5b46a5ae16e6",
+      "name": "build_payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4896,
+        3312
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ !!$json.reply_api_payload }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "baca55ce-96b3-4340-893c-8e30026e3774",
+      "name": "should_send_reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5120,
+        3312
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.reply_api_payload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "71026def-8962-4ed8-91e2-ba4b06a00f85",
+      "name": "line_api_reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5344,
+        3248
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('runtime_config').item.json.ADMIN_RUNTIME_HANDOFF_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('build_payloads').item.json.admin_notify_payload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "dc7a1259-f439-4f02-9965-5577e39d5e72",
+      "name": "notify_admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5792,
+        3168
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "61734442-cad0-4aeb-8811-926fa53610ad",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        6016,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.gate_decision.allow_ai }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    },
+                    "id": "bdfdc5d4-0a09-4eab-90d9-f239fdaef6f3"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.gate_decision.allow_ai }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false"
+                    },
+                    "id": "662cfb5a-61fc-4373-a77f-9610a4b504fb"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1c23424-2972-4d68-a62c-185ce13ed0c3",
+      "name": "route_human_gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3984,
+        3280
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "be76ae91-85e3-4fb0-ae44-02d6cd6d1bff",
+              "leftValue": "={{ $('parse_ai_response').item.json.should_handoff }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5568,
+        3248
+      ],
+      "id": "407e0303-9f70-4d70-9720-923242266287",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('runtime_config').item.json.ADMIN_RUNTIME_HANDOFF_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.admin_notify_payload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "4b53db7a-1126-434b-955e-1867b34399f0",
+      "name": "notify_admin2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5792,
+        3584
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "showLoadingAnimation",
+        "chatId": "={{ $('runtime_config').item.json.body.events[0].source.userId }}"
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        6192,
+        3216
+      ],
+      "id": "ac4b6d16-0c1a-498b-a5e3-b1a6f52c6ad0",
+      "name": "Line Messaging",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 12
+            }
+          ]
+        }
+      },
+      "id": "63471a83-1f71-4994-b4c6-5b48b746ac14",
+      "name": "Every 12 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1968,
+        3728
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://brain.paaair.online/api/admin/follow-up",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-cron-secret",
+              "value": "8361a08f404822213cd965a21e74650b175fc696ff1004f9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8ad22a8-7263-4931-91d0-ac5a1ce5ac6f",
+      "name": "Call Follow-Up API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2192,
+        3728
+      ]
+    }
+  ],
+  "pinData": {
+    "line_runtime_inbound": [
+      {
+        "json": {
+          "headers": {
+            "host": "admin.paaair.online",
+            "user-agent": "LineBotWebhook/2.0",
+            "content-length": "809",
+            "content-type": "application/json; charset=utf-8",
+            "via": "2.0 Caddy",
+            "x-forwarded-for": "147.92.149.167",
+            "x-forwarded-host": "admin.paaair.online",
+            "x-forwarded-proto": "https",
+            "x-line-signature": "LbrA/4UGC58KZVLvdvgqPRQQgBFPLE2YI1cp6prxrGk=",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "destination": "U1eee2ec37e5f71c20f38dd52154f6ad7",
+            "events": [
+              {
+                "type": "message",
+                "message": {
+                  "type": "text",
+                  "id": "610036887444521352",
+                  "quoteToken": "Y8tvsxspwchVajqbqz10jfBBTR8QWKEhSyqb54QJSVRbStU2qJ9ST3CzZkLSL8POBXcoYvtX0u26R1KGOQibo9yCFkDtHT79Tl4pfdoxBQWNCL5yIJBsjJDgGTe3ItG7aLTXcNReLEMVDer-q-RZyQ",
+                  "markAsReadToken": "MVoG02VFOYkNQnDwgdS7e8Co53fSuyCOxQWik9FTv8OXunpFuWBjYEmdB8FW2vNPsCT2nKK8KaOF2jYvajtR8p_uFp3ZJ8DZVeVDTDe8eBZQe-LmOGGsXvrUIlLZGBewqhX0mFtrpyUg1HKlo_o9gsg25xiXB9BgAhrHAoUzp5EMF-zwp5oBwsChzzZ4N8D3C7eQGlxOHodYp7Nc6Zen8g",
+                  "text": "สวัสดี"
+                },
+                "webhookEventId": "01KPE2R1PXCV4KBS9SJNVN9RXE",
+                "deliveryContext": {
+                  "isRedelivery": false
+                },
+                "timestamp": 1776441623776,
+                "source": {
+                  "type": "user",
+                  "userId": "U4abf59017fc5671c3cfa3fb2b07f40a2"
+                },
+                "replyToken": "fa6f46704e684775b0214d3d3e3713fd",
+                "mode": "active"
+              }
+            ]
+          },
+          "webhookUrl": "https://admin.paaair.online/webhook/line_runtime_inbound",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "runtime_config": {
+      "main": [
+        [
+          {
+            "node": "extract_first_event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_first_event": {
+      "main": [
+        [
+          {
+            "node": "has_valid_event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "has_valid_event": {
+      "main": [
+        [
+          {
+            "node": "is_text_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is_text_message": {
+      "main": [
+        [
+          {
+            "node": "normalize_line_event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_line_event": {
+      "main": [
+        [
+          {
+            "node": "has_minimum_normalized_fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "has_minimum_normalized_fields": {
+      "main": [
+        [
+          {
+            "node": "runtime_get_ai_gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "runtime_get_ai_gate": {
+      "main": [
+        [
+          {
+            "node": "decide_gate_policy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Line Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "decide_gate_policy": {
+      "main": [
+        [
+          {
+            "node": "route_human_gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build_skip_ai_payload": {
+      "main": [
+        [
+          {
+            "node": "notify_admin2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "call_ai_respond": {
+      "main": [
+        [
+          {
+            "node": "parse_ai_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse_ai_response": {
+      "main": [
+        [
+          {
+            "node": "route_action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "route_action": {
+      "main": [
+        [
+          {
+            "node": "build_payloads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "build_payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build_payloads": {
+      "main": [
+        [
+          {
+            "node": "should_send_reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "should_send_reply": {
+      "main": [
+        [
+          {
+            "node": "line_api_reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "line_api_reply": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify_admin": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "line_runtime_inbound": {
+      "main": [
+        [
+          {
+            "node": "runtime_config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "route_human_gate": {
+      "main": [
+        [
+          {
+            "node": "call_ai_respond",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "build_skip_ai_payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify_admin2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Line Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 12 Hours": {
+      "main": [
+        [
+          {
+            "node": "Call Follow-Up API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "0e660630-0514-415c-b7d0-d3e3cacdc7a9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50b9398667fecef5231b900714a0997b8e87996f58727cad5427170a677b0267"
+  },
+  "id": "hwVWDV9hl36zSZYP",
+  "tags": []
+}

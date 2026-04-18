@@ -1,0 +1,38 @@
+{
+  "name": "repair_request_basic",
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s005",
+      "display_name": "สมชาย"
+    },
+    "message": "แอร์ไม่เย็น 2 เครื่อง อยู่บางพลี ขอช่างเข้าตรวจพรุ่งนี้ช่วงบ่ายครับ",
+    "prior_case_state": {
+      "extracted_fields": {
+        "customer_name": "สมชาย"
+      }
+    }
+  },
+  "expected": {
+    "intent": "repair_request",
+    "should_handoff": false,
+    "missing_fields": [],
+    "extracted_fields": {
+      "area": "บางพลี",
+      "preferred_date": "พรุ่งนี้ช่วงบ่าย",
+      "service_type": "repair",
+      "machine_count": 2
+    },
+    "customer_reply_equals": "รับทราบครับ เดี๋ยวผมช่วยตรวจสอบข้อมูลให้",
+    "handoff_reason": null,
+    "admin_summary": {
+      "reason": "not_required"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-002", "mock-knowledge-004"],
+    "policy_scope": ["no_price_invention", "collect_symptoms"],
+    "allowed_answer_types": ["troubleshooting_tips", "information_request"],
+    "forbidden_answer_types": ["fixed_price_quote", "repair_guarantee"]
+  }
+}

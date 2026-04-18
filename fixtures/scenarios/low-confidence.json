@@ -1,0 +1,27 @@
+{
+  "name": "low_confidence_custom_question",
+  "input": {
+    "channel": "line",
+    "message": "ระบบ chiller กับ AHU อาคารสำนักงาน ถ้าจะประเมิน PM contract รายปีคิดยังไง",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "general_inquiry",
+    "should_handoff": true,
+    "missing_fields": [],
+    "customer_reply_includes": ["เจ้าหน้าที่", "ประสานกลับ"],
+    "handoff_reason": "low_confidence_or_policy_limit",
+    "admin_summary": {
+      "reason": "low_confidence_or_policy_limit"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-004"],
+    "policy_scope": ["low_confidence_handoff"],
+    "should_handoff": true,
+    "allowed_answer_types": ["handoff_notification"],
+    "forbidden_answer_types": ["custom_pricing", "technical_explanation"]
+  }
+}

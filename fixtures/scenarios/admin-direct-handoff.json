@@ -1,0 +1,32 @@
+{
+  "name": "admin_direct_handoff_basic",
+  "input": {
+    "channel": "line",
+    "profile": {
+      "user_id": "mock-line-s007",
+      "display_name": "ลูกค้าที่ต้องการคุยคน"
+    },
+    "message": "ขอคุยกับเจ้าหน้าที่หรือแอดมินได้เลยครับ",
+    "prior_case_state": {
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "admin_handoff",
+    "should_handoff": true,
+    "missing_fields": [],
+    "customer_reply_includes": ["เจ้าหน้าที่", "ประสานกลับ"],
+    "handoff_reason": "customer_requested_human_agent",
+    "admin_summary": {
+      "reason": "customer_requested_human_agent",
+      "recommended_next_action": "admin_contact_customer"
+    }
+  },
+  "knowledge_debug": {
+    "relevant_knowledge_ids": ["mock-knowledge-004"],
+    "policy_scope": ["immediate_handoff_requested"],
+    "should_handoff": true,
+    "allowed_answer_types": ["handoff_notification"],
+    "forbidden_answer_types": ["ai_self_service_retry"]
+  }
+}
