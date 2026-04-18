@@ -36,6 +36,13 @@ export function resolveLineAccessToken(context: LineChannelContext = {}): Resolv
     };
   }
 
+  if (accountKey === "pa cooling" || accountKey === "pa-cooling") {
+    return {
+      token: env.LINE_CHANNEL_ACCESS_TOKEN_PA_COOLING || env.LINE_CHANNEL_ACCESS_TOKEN || null,
+      source: env.LINE_CHANNEL_ACCESS_TOKEN_PA_COOLING ? "LINE_CHANNEL_ACCESS_TOKEN_PA_COOLING" : "LINE_CHANNEL_ACCESS_TOKEN"
+    };
+  }
+
   return {
     token: env.LINE_CHANNEL_ACCESS_TOKEN || null,
     source: "LINE_CHANNEL_ACCESS_TOKEN"
