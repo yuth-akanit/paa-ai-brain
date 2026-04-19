@@ -19,6 +19,44 @@ import { normalizeScheduleFields } from "./schedule-normalizer";
 import type { CaseSummaryPayload, ExtractedCaseFields, IntentName, ServiceType } from "../types";
 import { isMeaningful, joinMeaningful } from "../utils";
 
+const CASE_SERVICE_LABELS: Record<string, string> = {
+  cleaning: "ล้างแอร์", repair: "ซ่อมแอร์",
+  inspection: "ตรวจเช็คแอร์", relocation: "ย้ายแอร์",
+  installation: "ติดตั้งแอร์", cold_room: "ห้องเย็น"
+};
+
+function buildConversationStateSummary(
+  recentMessages: Array<{ role: string; message_text: string }>,
+  knownFields: ExtractedCaseFields
+): string {
+  const known: string[] = [];
+  if (knownFields.customer_name) known.push(`ชื่อ="${knownFields.customer_name}"`);
+  if (knownFields.phone) known.push(`เบอร์=${knownFields.phone}`);
+  const loc = knownFields.address || knownFields.area;
+  if (loc) known.push(`สถานที่="${loc.slice(0, 60)}"`);
+  if (knownFields.machine_count) known.push(`${knownFields.machine_count} เครื่อง`);
+  if (knownFields.machine_type) known.push(`ประเภท=${knownFields.machine_type}`);
+  if (knownFields.preferred_date) known.push(`วัน=${knownFields.preferred_date}`);
+  if (knownFields.preferred_time) known.push(`เวลา=${knownFields.preferred_time}`);
+
+  const serviceLabel = knownFields.service_type
+    ? (CASE_SERVICE_LABELS[knownFields.service_type] ?? knownFields.service_type)
+    : null;
+
+  // Only customer turns — omit assistant turns to prevent style contamination
+  const recentCustomer = recentMessages
+    .filter(m => m.role === "customer")
+    .slice(-2)
+    .map(m => `"${m.message_text.slice(0, 80)}"`)
+    .join(" → ");
+
+  const parts: string[] = [];
+  if (serviceLabel) parts.push(`งาน: ${serviceLabel}`);
+  if (known.length > 0) parts.push(`ทราบ: ${known.join(", ")}`);
+  if (recentCustomer) parts.push(`ล่าสุด: ${recentCustomer}`);
+  return parts.join(" | ") || "เริ่มต้น";
+}
+
 function mergeFields(current: ExtractedCaseFields, next: ExtractedCaseFields): ExtractedCaseFields {
   // Only apply values from `next` that are actually set — never let null/empty/0 wipe a
   // previously-known value (e.g. AI returning service_type:null should not erase "cleaning").
@@ -292,10 +330,7 @@ export async function processCustomerMessage(params: {
   });
   const confidence = intent === classified.intent ? classified.confidence : Math.max(classified.confidence, 0.92);
 
-  const summaryText = recentMessages
-    .slice(-8)
-    .map((message) => `${message.role}: ${message.message_text}`)
-    .join("\n");
+  const summaryText = buildConversationStateSummary(recentMessages, extractedFields);
 
   // Preserve booking context while a service flow is still active, even if a turn is
   // temporarily classified as pricing/service-area FAQ (e.g. customer sends address,

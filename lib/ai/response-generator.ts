@@ -171,14 +171,22 @@ function buildDeterministicPricingReply(input: GenerateAiResponseInput) {
     return null;
   }
 
-  const priceLines = relevantFacts.map((fact) => `- ${fact.priceLabel}`).join("\n");
+  const TYPE_LABELS: Record<string, string> = {
+    wall: "แอร์ติดผนัง", cassette: "แอร์ 4 ทิศทาง",
+    ceiling_floor: "แอร์แขวน/ตั้งพื้น", package: "แอร์ตู้ตั้ง", cold_room: "ห้องเย็น"
+  };
+  const typeLabel = TYPE_LABELS[machineType] ?? "แอร์";
+  const priceLines = relevantFacts.map((fact) => `• ${fact.priceLabel}`).join("\n");
   const addons = input.priceFacts
     .filter((fact) => fact.serviceCode?.startsWith("addon_") && fact.priceLabel)
-    .map((fact) => `- ${fact.priceLabel}`)
+    .map((fact) => `• ${fact.priceLabel}`)
     .join("\n");
 
   const addonSection = addons ? `\n\nบริการเสริม:\n${addons}` : "";
-  const reply = `${priceLines}${addonSection}\n\n*ราคาเป็นราคาเริ่มต้น อาจมีการปรับตามสภาพหน้างาน ขนาดเครื่อง และรุ่นครับ*`;
+  const bridge = input.knownFields.machine_count
+    ? `มี ${input.knownFields.machine_count} เครื่อง สะดวกให้ทีมช่างเข้าจัดการได้เลยครับ จองคิวได้เลยไหมครับ?`
+    : "สะดวกแจ้งขนาด BTU และจำนวนเครื่องได้เลยครับ เดี๋ยวผมช่วยประเมินให้แคบลงได้ครับ";
+  const reply = `${typeLabel} ราคาล้างเริ่มต้น:\n${priceLines}${addonSection}\n\n*(ราคาอาจปรับตามสภาพหน้างานและขนาดเครื่อง)*\n\n${bridge}`;
 
   return {
     customer_reply: finalClean(reply),
@@ -243,6 +251,8 @@ export async function generateAiResponse(input: GenerateAiResponseInput): Promis
 
   try {
     const businessStatus = getBusinessStatus();
+    const missingFieldsList = getMissingFields(input);
+    const nextFieldToAsk = (missingFieldsList[0] as string | undefined) ?? null;
     const raw = await runJsonCompletion(
       buildResponsePrompt(
         {
@@ -251,7 +261,8 @@ export async function generateAiResponse(input: GenerateAiResponseInput): Promis
           knownFields: input.knownFields,
           knowledge: input.knowledge,
           priceFacts: input.priceFacts,
-          businessHoursNote: buildBusinessHoursPromptNote(businessStatus)
+          businessHoursNote: buildBusinessHoursPromptNote(businessStatus),
+          nextFieldToAsk
         },
         input.intent
       ),

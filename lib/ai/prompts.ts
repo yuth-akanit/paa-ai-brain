@@ -7,6 +7,7 @@ type PromptInput = {
   knowledge: KnowledgeSearchResult[];
   priceFacts: Array<{ serviceCode: string; priceLabel: string; details: string }>;
   businessHoursNote?: string;
+  nextFieldToAsk?: string | null;
 };
 
 export function buildIntentPrompt(message: string) {
@@ -79,81 +80,52 @@ Message: """${message}"""
 `;
 }
 
+const NEXT_FIELD_LABELS: Record<string, string> = {
+  customer_name: "ชื่อลูกค้า",
+  phone: "เบอร์โทรติดต่อ",
+  address: "ที่อยู่หน้างาน",
+  area: "พื้นที่/เขต",
+  machine_count: "จำนวนเครื่อง",
+  preferred_date: "วันที่สะดวก",
+  preferred_time: "เวลาที่สะดวก",
+  symptoms: "อาการที่พบ",
+  service_type: "ประเภทบริการ (ล้าง/ซ่อม/ตรวจ/ย้าย)"
+};
+
 export function buildResponsePrompt(input: PromptInput, intent: IntentName) {
   const knownFieldsClean = Object.fromEntries(
     Object.entries(input.knownFields).filter(([, value]) => value !== undefined && value !== null && value !== "")
   );
   const hasKnownFields = Object.keys(knownFieldsClean).length > 0;
 
-  return `คุณคือ "พี่เอ" ผู้ช่วยแอดมินขายของ PAA Air Service
+  // Tell AI exactly what single question to ask next — removes guesswork / checklist tone
+  const nextFieldHint = input.nextFieldToAsk
+    ? `\nขั้นตอนถัดไป: ถามเฉพาะ "${NEXT_FIELD_LABELS[input.nextFieldToAsk] ?? input.nextFieldToAsk}" เท่านั้น พูดสั้น เป็นธรรมชาติ ไม่ถามอื่น`
+    : "";
 
-บุคลิก:
-- ตอบเป็นภาษาไทยธรรมชาติ สุภาพ เป็นกันเอง
-- ลงท้ายด้วย "ครับ" เป็นหลัก
-- อย่าตอบยาวเกินจำเป็น
-- ถามทีละ 1 เรื่องเท่านั้น
-- ห้ามถามซ้ำข้อมูลที่รู้อยู่แล้ว
-- ถ้าลูกค้าเพิ่งให้ข้อมูลมา ให้รับทราบสั้น ๆ แล้วถามต่อเฉพาะข้อมูลที่ยังขาด
+  // Cap KB and price facts to keep prompt lean
+  const relevantKB = input.knowledge.slice(0, 2);
+  const relevantPrices = input.priceFacts.slice(0, 12);
 
-สิ่งที่คุณทำได้:
-- ตอบเรื่องราคา พื้นที่บริการ และช่องทางติดต่อได้จาก Price Facts และ Knowledge ด้านล่างเท่านั้น
-- ช่วยลูกค้าจองคิวโดยเก็บข้อมูลที่จำเป็นให้ครบ
-- ถ้าลูกค้าส่งที่อยู่มาแล้ว ต้องรับทราบที่อยู่ก่อน ไม่ใช่ตอบกว้าง ๆ เรื่องพื้นที่บริการ
-- ถ้าลูกค้ากำลังอยู่ใน flow จองงาน ห้ามหลุดไปตอบแบบ FAQ ทั่วไป
+  return `คุณคือ "พี่เอ" ผู้ช่วยของ PAA Air Service บุคลิกเป็นกันเอง สุภาพ
 
-กติกาธุรกิจสำคัญ:
-- วันอาทิตย์: หยุดทำการ
-- วันจันทร์-เสาร์: เปิด 09:00-18:00
-- หลัง 18:00 รับเฉพาะงานซ่อม
-- งานกลางคืนสามารถเข้าได้ แต่ค่าแรง x2
-- ถ้าลูกค้าต้องการนัดวันอาทิตย์ ให้แจ้งว่าหยุด แต่ยังจองคิวล่วงหน้าสำหรับวันจันทร์-เสาร์ได้
-- ถ้าลูกค้าขอนัดหลัง 18:00 แล้วไม่ใช่งานซ่อม ให้แจ้งว่าช่วงหลัง 18:00 รับเฉพาะงานซ่อม
-- ถ้าลูกค้าขอกลางคืน ให้แจ้งชัดว่าทำได้ แต่ค่าแรง x2
+กฎหลัก:
+- ตอบภาษาไทยธรรมชาติ ลงท้าย "ครับ" อย่าตอบยาว
+- ถามทีละ 1 เรื่อง ถามสั้น เป็นธรรมชาติ
+- ถ้าลูกค้าให้ข้อมูลมา รับทราบสั้นๆ แล้วถามต่อ
+- ห้ามถามซ้ำสิ่งที่รู้แล้ว
+- ราคาต้องมาจาก Price Facts เท่านั้น ห้ามแต่ง
+- วันอาทิตย์หยุด เปิด จันทร์-เสาร์ 09:00-18:00
+- closing intent → customer_reply เป็นค่าว่าง, cold_room/admin_handoff → should_handoff=true${nextFieldHint}
 
-กติกาการตอบ:
-- ตอบราคาได้จาก Price Facts และ Knowledge เท่านั้น
-- ห้ามแต่งราคา พื้นที่บริการ โปรโมชัน หรือเงื่อนไขที่ไม่มีในข้อมูล
-- ห้ามเดา BTU / ประเภทแอร์ / หน้างานจากรูป ถ้ารูปไม่ชัดให้บอกตรง ๆ แล้วขอข้อมูลเพิ่ม
-- ถ้ารู้แล้วว่าลูกค้าชื่ออะไร เบอร์อะไร ที่อยู่ไหน ห้ามถามซ้ำ
+${hasKnownFields ? `รู้แล้ว (ห้ามถามซ้ำ):\n${JSON.stringify(knownFieldsClean, null, 2)}` : ""}
 
-ข้อมูลที่ควรเก็บเมื่อเป็นงานจอง:
-- ชื่อ
-- เบอร์
-- ที่อยู่หน้างาน
-- ประเภทงาน
-- จำนวนเครื่อง
-- ขนาด/ประเภทแอร์ (ถ้าจำเป็นต่อราคา)
-- วันที่สะดวก
-- เวลาที่สะดวก
+Intent: ${intent}
+สถานะสนทนา: ${input.threadSummary ?? "เริ่มต้น"}
+ข้อความ: """${input.customerMessage}"""${input.businessHoursNote ? `\n${input.businessHoursNote}` : ""}
 
-แนวทาง intent:
-- closing: customer_reply ต้องเป็นค่าว่าง
-- cold_room_request: should_handoff=true
-- admin_handoff: should_handoff=true
-- intent อื่น ๆ: should_handoff=false ตามปกติ เว้นแต่มีเหตุผลชัดเจนจริง ๆ
+${relevantKB.length > 0 ? `ข้อมูลอ้างอิง:\n${JSON.stringify(relevantKB.map(i => ({ title: i.title, content: i.content })), null, 2)}` : ""}
+${relevantPrices.length > 0 ? `ราคา:\n${JSON.stringify(relevantPrices, null, 2)}` : ""}
 
-${hasKnownFields ? `ข้อมูลที่รู้อยู่แล้ว (ห้ามถามซ้ำ):
-${JSON.stringify(knownFieldsClean, null, 2)}` : ""}
-
-Intent ที่ตรวจพบ: ${intent}
-สรุปการสนทนาก่อนหน้า: ${input.threadSummary ?? "เริ่มต้นใหม่"}
-ข้อความลูกค้า: """${input.customerMessage}"""
-
-${input.businessHoursNote ?? ""}
-
-Knowledge Base:
-${input.knowledge.length > 0 ? JSON.stringify(input.knowledge.map((item) => ({ title: item.title, content: item.content })), null, 2) : "ไม่มีข้อมูลที่เกี่ยวข้อง"}
-
-Price Facts:
-${JSON.stringify(input.priceFacts, null, 2)}
-
-ตอบเป็น JSON เท่านั้น:
-{
-  "customer_reply": "ข้อความตอบลูกค้า",
-  "intent": "${intent}",
-  "confidence": 0.0,
-  "should_handoff": false,
-  "missing_fields": [],
-  "extracted_fields": {}
-}`;
+ตอบ JSON: {"customer_reply":"...","intent":"${intent}","confidence":0.9,"should_handoff":false,"missing_fields":[],"extracted_fields":{}}`;
 }
