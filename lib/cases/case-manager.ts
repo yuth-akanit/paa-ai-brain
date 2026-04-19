@@ -71,7 +71,8 @@ const ACTIVE_SERVICE_INTENTS = new Set<IntentName>([
   "inspection_request",
   "relocation_request",
   "installation_request",
-  "scheduling_request"
+  "scheduling_request",
+  "faq_pricing"
 ]);
 
 const STRUCTURED_FOLLOWUP_FIELDS: Array<keyof ExtractedCaseFields> = [
@@ -79,6 +80,7 @@ const STRUCTURED_FOLLOWUP_FIELDS: Array<keyof ExtractedCaseFields> = [
   "phone",
   "area",
   "address",
+  "machine_type",
   "machine_count",
   "preferred_date",
   "preferred_time"
@@ -126,6 +128,24 @@ function looksLikeStructuredFollowUp(messageText: string, extractedFields: Extra
   });
 }
 
+function looksLikePricingQualifier(messageText: string, extractedFields: ExtractedCaseFields) {
+  const text = messageText.trim().toLowerCase();
+  const digits = normalizeDigits(text);
+  const hasBtuLikeNumber = digits.length >= 4 && digits.length <= 5 && !extractedFields.phone;
+
+  return Boolean(
+    extractedFields.machine_type ||
+    hasBtuLikeNumber ||
+    text.includes("btu") ||
+    text.includes("ติดผนัง") ||
+    text.includes("cassette") ||
+    text.includes("4 ทิศทาง") ||
+    text.includes("แขวน") ||
+    text.includes("ตั้งพื้น") ||
+    text.includes("ตู้ตั้ง")
+  );
+}
+
 function resolveIntentWithCaseContext(args: {
   existingCase: Awaited<ReturnType<typeof getServiceCaseById>>;
   classifiedIntent: IntentName;
@@ -133,6 +153,7 @@ function resolveIntentWithCaseContext(args: {
   extractedFields: ExtractedCaseFields;
 }) {
   const previousIntent = args.existingCase?.ai_intent as IntentName | undefined;
+  const previousServiceType = args.existingCase?.service_type as ServiceType | null;
   const missingFields = Array.isArray(args.existingCase?.missing_fields) ? args.existingCase.missing_fields : [];
   const weakFollowUpIntent =
     args.classifiedIntent === "faq_pricing" ||
@@ -150,14 +171,34 @@ function resolveIntentWithCaseContext(args: {
     return typeof value === "string" ? value.trim().length > 0 : typeof value === "number";
   });
 
+  const pricingQualifier = looksLikePricingQualifier(args.messageText, args.extractedFields);
+  const contextualServiceIntent =
+    previousServiceType === "cleaning"
+      ? "cleaning_request"
+      : previousServiceType === "repair"
+        ? "repair_request"
+        : previousServiceType === "inspection"
+          ? "inspection_request"
+          : previousServiceType === "relocation"
+            ? "relocation_request"
+            : previousIntent;
+
   if (
-    previousIntent &&
-    ACTIVE_SERVICE_INTENTS.has(previousIntent) &&
-    weakFollowUpIntent &&
-    fillsMissingStructuredField &&
-    looksLikeStructuredFollowUp(args.messageText, args.extractedFields)
+    previousIntent === "faq_pricing" &&
+    pricingQualifier &&
+    !["admin_handoff", "closing", "greeting"].includes(args.classifiedIntent)
   ) {
-    return previousIntent;
+    return "faq_pricing";
+  }
+
+  if (
+    contextualServiceIntent &&
+    ACTIVE_SERVICE_INTENTS.has(contextualServiceIntent) &&
+    weakFollowUpIntent &&
+    (fillsMissingStructuredField || pricingQualifier) &&
+    (looksLikeStructuredFollowUp(args.messageText, args.extractedFields) || pricingQualifier)
+  ) {
+    return contextualServiceIntent;
   }
 
   return args.classifiedIntent;

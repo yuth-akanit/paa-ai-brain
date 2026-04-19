@@ -115,7 +115,7 @@ function buildFallbackResponse(input: GenerateAiResponseInput): AiDecision {
     !NO_HANDOFF_INTENTS.includes(input.intent) &&
     (input.intentConfidence < 0.45 || input.intent === "admin_handoff" || input.intent === "cold_room_request");
 
-  let customerReply = "สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?";
+  let customerReply = "ขอรายละเอียดเพิ่มเติมอีกนิดได้ไหมครับ?";
 
   if (input.intent === "closing") {
     customerReply = "";
