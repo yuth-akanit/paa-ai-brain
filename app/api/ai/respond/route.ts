@@ -175,12 +175,39 @@ export async function POST(request: Request) {
 
     console.log(`[AI-RESPOND] [${requestId}] before_process t=${Date.now() - startedAt}ms`);
     const processStartedAt = Date.now();
-    
+
     let imageBase64: string | null = null;
     let customerMessage = inbound.customerMessage || "";
 
-    // Sticker messages carry no text — treat as a closing acknowledgment so the bot
-    // does not mistake silence for a new conversation start (greeting response).
+    // Rich Menu postback — treat as a fresh "I need help" signal
+    const menuCmd = customerMessage.trim().toUpperCase();
+    if (menuCmd.startsWith("MENU:") || menuCmd === "POSTBACK:ASK_AI") {
+      await createConversationMessage({
+        threadId: actualThreadId,
+        caseId: serviceCase.id,
+        role: "customer",
+        providerMessageId: inbound.sourceEvent.messageId,
+        messageText: "[menu_tap]"
+      });
+      await updateThreadState({
+        threadId: actualThreadId,
+        lastCustomerMessageAt: new Date().toISOString()
+      });
+      return NextResponse.json({
+        ok: true,
+        intent: "greeting",
+        confidence: 1.0,
+        should_handoff: false,
+        missing_fields: [],
+        extracted_fields: serviceCase.extracted_fields ?? {},
+        customer_reply: "มีอะไรให้ช่วยไหมครับ? 😊\nล้างแอร์ / ซ่อมแอร์ / ย้ายแอร์ / ตรวจเช็ค / สอบถามราคา",
+        recommended_action: "reply_customer",
+        admin_summary: null,
+        decision_meta: { reason: "rich_menu_tap" }
+      });
+    }
+
+    // Sticker — if in active booking flow, ask the next missing field; otherwise ignore
     if (inbound.sourceEvent.messageType === "sticker") {
       await createConversationMessage({
         threadId: actualThreadId,
@@ -189,6 +216,41 @@ export async function POST(request: Request) {
         providerMessageId: inbound.sourceEvent.messageId,
         messageText: "[sticker]"
       });
+      await updateThreadState({
+        threadId: actualThreadId,
+        lastCustomerMessageAt: new Date().toISOString()
+      });
+
+      const ACTIVE_INTENTS_FOR_STICKER = ["cleaning_request", "repair_request", "inspection_request", "relocation_request", "installation_request", "scheduling_request"];
+      const FIELD_QUESTIONS: Record<string, string> = {
+        customer_name: "ขอทราบชื่อลูกค้าด้วยครับ? 😊",
+        phone: "ขอเบอร์โทรติดต่อด้วยครับ?",
+        address: "ขอที่อยู่หรือพื้นที่บริการด้วยครับ?",
+        area: "อยู่แถวไหนครับ?",
+        preferred_date: "สะดวกวันไหนครับ?",
+        preferred_time: "สะดวกเวลาไหนครับ?",
+        machine_count: "มีแอร์กี่เครื่องครับ?",
+        symptoms: "ช่วยอธิบายอาการเพิ่มเติมอีกนิดได้ไหมครับ?"
+      };
+      const existingIntent = serviceCase.ai_intent as string | null;
+      const missingFields = Array.isArray(serviceCase.missing_fields) ? serviceCase.missing_fields as string[] : [];
+
+      if (existingIntent && ACTIVE_INTENTS_FOR_STICKER.includes(existingIntent) && missingFields.length > 0) {
+        const nextQuestion = FIELD_QUESTIONS[missingFields[0]] ?? "ขอรายละเอียดเพิ่มเติมด้วยครับ?";
+        return NextResponse.json({
+          ok: true,
+          intent: existingIntent,
+          confidence: 1.0,
+          should_handoff: false,
+          missing_fields: missingFields,
+          extracted_fields: serviceCase.extracted_fields ?? {},
+          customer_reply: nextQuestion,
+          recommended_action: "reply_customer",
+          admin_summary: null,
+          decision_meta: { reason: "sticker_in_flow" }
+        });
+      }
+
       return NextResponse.json({
         ok: true,
         intent: "closing",
@@ -203,13 +265,37 @@ export async function POST(request: Request) {
       });
     }
 
+    // Image — if no caption text, ask what service they need (don't blindly analyze)
     if (inbound.sourceEvent.messageType === "image") {
+      if (!customerMessage) {
+        await createConversationMessage({
+          threadId: actualThreadId,
+          caseId: serviceCase.id,
+          role: "customer",
+          providerMessageId: inbound.sourceEvent.messageId,
+          messageText: "[image]"
+        });
+        await updateThreadState({
+          threadId: actualThreadId,
+          lastCustomerMessageAt: new Date().toISOString()
+        });
+        return NextResponse.json({
+          ok: true,
+          intent: "general_inquiry",
+          confidence: 0.8,
+          should_handoff: false,
+          missing_fields: [],
+          extracted_fields: serviceCase.extracted_fields ?? {},
+          customer_reply: "ได้เลยครับ เห็นรูปที่ส่งมาแล้วครับ 😊\nรบกวนบอกด้วยครับว่าต้องการบริการอะไร?\nล้างแอร์ / ซ่อมแอร์ / ตรวจเช็ค / ย้ายแอร์",
+          recommended_action: "reply_customer",
+          admin_summary: null,
+          decision_meta: { reason: "image_ask_context" }
+        });
+      }
+      // Has caption text — download image for full AI vision analysis
       try {
         const { getMessageContent } = await import("@/lib/line/client");
         imageBase64 = await getMessageContent(inbound.sourceEvent.messageId);
-        if (!customerMessage) {
-          customerMessage = "ลูกค้ารูปภาพมาให้ดู";
-        }
       } catch (e) {
         console.error("Failed to download image", e);
       }

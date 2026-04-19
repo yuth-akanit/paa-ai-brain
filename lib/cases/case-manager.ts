@@ -280,6 +280,16 @@ export async function processCustomerMessage(params: {
     imageBase64: params.imageBase64
   });
 
+  // Safety net: if bot has been vague ≥ 2 times recently, stop looping and escalate
+  const recentVagueCount = recentMessages
+    .filter(m => m.role === "assistant" && (m.metadata as Record<string, unknown>)?.intent === "general_inquiry")
+    .length;
+  if (recentVagueCount >= 2 && aiDecision.intent === "general_inquiry" && !aiDecision.should_handoff) {
+    console.log(`[CASE-MANAGER] vague_escalation count=${recentVagueCount} -> forcing handoff`);
+    aiDecision.should_handoff = true;
+    aiDecision.customer_reply = "ขอโทษครับ ผมเข้าใจไม่แน่ชัด ขอส่งต่อให้เจ้าหน้าที่ช่วยดูแลต่อนะครับ 🙏";
+  }
+
   const mergedFields = mergeFields(extractedFields, aiDecision.extracted_fields);
   const summary = buildSummary({
     customerName: mergedFields.customer_name ?? params.customerName,
