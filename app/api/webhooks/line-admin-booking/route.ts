@@ -29,13 +29,16 @@ function formatThaiTime(time: string): string {
 }
 
 function formatBookingMessage(payload: BookingWebhookPayload): string {
-  const serviceLabel = SERVICE_TYPE_LABELS[payload.service_type] ?? payload.service_type;
+  const serviceLabel = payload.service_type
+    ? SERVICE_TYPE_LABELS[payload.service_type] ?? payload.service_type
+    : "ยังไม่ระบุประเภทงาน";
+  const machineStr = payload.machine_count ? ` ${payload.machine_count} เครื่อง` : "";
   const location = payload.area || payload.address;
   const lines = [
     "🔔 มีการจองงานใหม่!",
     "",
     "📋 รายละเอียดการนัด",
-    `- งาน: ${serviceLabel} ${payload.machine_count} เครื่อง`,
+    `- งาน: ${serviceLabel}${machineStr}`,
     `- วันที่: ${formatThaiDate(payload.date)}`,
     `- เวลา: ${formatThaiTime(payload.time)}`,
     location ? `- สถานที่: ${location}` : null,

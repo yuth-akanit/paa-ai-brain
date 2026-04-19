@@ -1,7 +1,7 @@
 import { classifyIntent } from "../ai/intent-classifier";
 import { generateAiResponse } from "../ai/response-generator";
 import { extractStructuredFields } from "../ai/structured-extractor";
-import { getMissingBookingFields, sendBookingWebhook } from "../booking/webhook";
+import { getMissingBookingFields, getMissingSchedulingFields, sendBookingWebhook } from "../booking/webhook";
 import {
   createAuditLog,
   createConversationMessage,
@@ -51,6 +51,40 @@ function buildSummary(args: {
   ];
 
   return parts.filter(Boolean).join(" | ");
+}
+
+const BOOKING_CONFIRM_SERVICE_LABELS: Record<string, string> = {
+  cleaning: "ล้างแอร์",
+  repair: "ซ่อมแอร์",
+  inspection: "ตรวจเช็คแอร์",
+  relocation: "ย้ายแอร์",
+  installation: "ติดตั้งแอร์",
+  cold_room: "ห้องเย็น"
+};
+
+function buildBookingConfirmationReply(fields: ExtractedCaseFields): string {
+  const serviceLabel = fields.service_type
+    ? BOOKING_CONFIRM_SERVICE_LABELS[fields.service_type] ?? fields.service_type
+    : null;
+  const machineStr = fields.machine_count ? ` ${fields.machine_count} เครื่อง` : "";
+  const location = fields.address || fields.area;
+
+  const lines: (string | null)[] = [
+    "✅ รับทราบครับ สรุปข้อมูลการจองให้นะครับ",
+    "",
+    `👤 ชื่อ: คุณ${fields.customer_name}`,
+    `📞 เบอร์: ${fields.phone}`,
+    location ? `📍 ที่อยู่: ${location}` : null,
+    `🗓 วันนัด: ${fields.preferred_date}`,
+    `⏰ เวลา: ${fields.preferred_time}`,
+    serviceLabel ? `🔧 บริการ: ${serviceLabel}${machineStr}` : null,
+    "",
+    serviceLabel
+      ? "ทีมช่างจะติดต่อยืนยันคิวอีกครั้งนะครับ 😊"
+      : "ทีมช่างจะติดต่อยืนยันคิวและรายละเอียดบริการอีกครั้งนะครับ 😊"
+  ];
+
+  return lines.filter((l): l is string => l !== null).join("\n");
 }
 
 function determineLeadStatus(missingFields: string[], shouldHandoff: boolean) {
@@ -282,11 +316,14 @@ export async function processCustomerMessage(params: {
 
   // Booking-context recovery: if AI is confused (general_inquiry + should_handoff)
   // but we're still in an active booking flow, ask next missing field instead of handing off
-  const BOOKING_SERVICE_INTENTS = ["cleaning_request","repair_request","inspection_request","relocation_request","installation_request"];
+  const BOOKING_SERVICE_INTENTS = ["cleaning_request","repair_request","inspection_request","relocation_request","installation_request","scheduling_request"];
   const previousAiIntent = existingCase?.ai_intent as string | null;
   const isInBookingFlow = previousAiIntent && BOOKING_SERVICE_INTENTS.includes(previousAiIntent);
   if (aiDecision.intent === "general_inquiry" && aiDecision.should_handoff && isInBookingFlow) {
-    const bookingMissing = getMissingBookingFields(currentCaseFields);
+    const isSchedulingRecovery = previousAiIntent === "scheduling_request";
+    const bookingMissing = isSchedulingRecovery
+      ? getMissingSchedulingFields(currentCaseFields)
+      : getMissingBookingFields(currentCaseFields);
     if (bookingMissing.length > 0) {
       const FIELD_Q: Record<string, string> = {
         customer_name: "ขอทราบชื่อลูกค้าด้วยได้ไหมครับ?",
@@ -318,6 +355,29 @@ export async function processCustomerMessage(params: {
   }
 
   const mergedFields = mergeFields(extractedFields, aiDecision.extracted_fields);
+
+  // Booking readiness check — done BEFORE saving assistant message so the
+  // confirmation summary is the actual reply stored and returned.
+  const bookingEligibleIntents = ["cleaning_request", "repair_request", "inspection_request", "relocation_request", "installation_request", "scheduling_request"];
+  const isSchedulingIntent = aiDecision.intent === "scheduling_request";
+  const missingForBooking = isSchedulingIntent
+    ? getMissingSchedulingFields(mergedFields)
+    : getMissingBookingFields(mergedFields);
+  const bookingAlreadySent = await hasAuditLogAction("service_case", params.caseId, "booking_webhook_sent");
+  const canSendBookingWebhook =
+    bookingEligibleIntents.includes(aiDecision.intent) &&
+    missingForBooking.length === 0 &&
+    !bookingAlreadySent;
+
+  console.log(`[CASE-MANAGER] booking_check intent=${aiDecision.intent} missing=${JSON.stringify(missingForBooking)} alreadySent=${bookingAlreadySent} can=${canSendBookingWebhook}`);
+
+  if (canSendBookingWebhook) {
+    // Override reply with booking confirmation summary before saving to DB
+    aiDecision.customer_reply = buildBookingConfirmationReply(mergedFields);
+    aiDecision.should_handoff = false;
+    aiDecision.missing_fields = [];
+  }
+
   const summary = buildSummary({
     customerName: mergedFields.customer_name ?? params.customerName,
     serviceType: (mergedFields.service_type as ServiceType | undefined) ?? null,
@@ -378,14 +438,7 @@ export async function processCustomerMessage(params: {
     payload: aiDecision
   });
 
-  const bookingEligibleIntents = ["cleaning_request", "repair_request", "inspection_request", "relocation_request", "scheduling_request"];
-  const bookingAlreadySent = await hasAuditLogAction("service_case", params.caseId, "booking_webhook_sent");
-  const missingForBooking = getMissingBookingFields(mergedFields);
-  const canSendBookingWebhook =
-    bookingEligibleIntents.includes(aiDecision.intent) &&
-    missingForBooking.length === 0 &&
-    !bookingAlreadySent;
-  console.log(`[CASE-MANAGER] booking_check intent=${aiDecision.intent} missing=${JSON.stringify(missingForBooking)} alreadySent=${bookingAlreadySent} can=${canSendBookingWebhook}`);
+  // (booking readiness check was done above, before assistant message was saved)
 
   if (canSendBookingWebhook) {
     try {
@@ -399,8 +452,8 @@ export async function processCustomerMessage(params: {
         address: mergedFields.address || mergedFields.area || "",
         date: mergedFields.preferred_date!,
         time: mergedFields.preferred_time!,
-        service_type: mergedFields.service_type as import("../types").ServiceType,
-        machine_count: mergedFields.machine_count!,
+        service_type: (mergedFields.service_type as import("../types").ServiceType) ?? null,
+        machine_count: mergedFields.machine_count ?? null,
         area: mergedFields.area ?? null,
         symptoms: mergedFields.symptoms ?? null,
         line_user_id: params.channelUserId ?? null
@@ -458,8 +511,9 @@ export async function processCustomerMessage(params: {
     });
     handoffId = handoff.id;
 
-  } else if (isScheduling) {
+  } else if (isScheduling && !canSendBookingWebhook) {
     // Soft notify — AI ยังตอบได้ แต่สร้าง handoff record เพื่อให้ admin เห็นในระบบว่าต้องเช็คคิว
+    // (ไม่ทำเมื่อ canSendBookingWebhook=true เพราะ booking webhook แจ้ง admin แล้ว)
     const schedulingSummary = `ลูกค้าถามเรื่องคิวนัดหมาย: "${params.messageText}" | AI ตอบว่าจะแจ้งทีมช่างแล้ว รบกวน admin เช็คคิวและติดต่อกลับ`;
     const schedulingSummaryPayload: CaseSummaryPayload = {
       caseId: params.caseId,

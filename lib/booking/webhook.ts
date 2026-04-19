@@ -11,8 +11,8 @@ export type BookingWebhookPayload = {
   address: string;
   date: string;
   time: string;
-  service_type: ServiceType;
-  machine_count: number;
+  service_type: ServiceType | null;
+  machine_count: number | null;
   area: string | null;
   symptoms: string | null;
   line_user_id: string | null;
@@ -29,6 +29,31 @@ export const BOOKING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
 
 export function getMissingBookingFields(fields: ExtractedCaseFields) {
   const missing = BOOKING_REQUIRED_FIELDS.filter((field) => {
+    const value = fields[field];
+    if (value === null || value === undefined) return true;
+    if (typeof value === "string") return value.trim().length === 0;
+    return false;
+  });
+
+  // address OR area must be present
+  const hasLocation =
+    (fields.address && fields.address.trim().length > 0) ||
+    (fields.area && fields.area.trim().length > 0);
+  if (!hasLocation) missing.push("address");
+
+  return missing;
+}
+
+// For scheduling_request flows: only require contact info + schedule, not service_type/machine_count
+export const SCHEDULING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
+  "customer_name",
+  "phone",
+  "preferred_date",
+  "preferred_time"
+];
+
+export function getMissingSchedulingFields(fields: ExtractedCaseFields) {
+  const missing = SCHEDULING_REQUIRED_FIELDS.filter((field) => {
     const value = fields[field];
     if (value === null || value === undefined) return true;
     if (typeof value === "string") return value.trim().length === 0;
