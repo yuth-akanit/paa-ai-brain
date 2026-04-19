@@ -40,6 +40,7 @@ export async function runJsonCompletion(prompt: string, options?: { disableRemot
         messages: [
           { role: "user", content }
         ],
+        max_tokens: 1024,
         response_format: {
           type: "json_object"
         }
