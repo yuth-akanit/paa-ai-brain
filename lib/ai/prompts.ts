@@ -65,9 +65,16 @@ Schema:
 9. symptoms: air conditioning problems
 10. urgency: [high, medium, low]
 
-Critical rule: If a district name like "บางพลี" is mentioned, it MUST be extracted into the "area" field.
+CRITICAL RULES:
+- Return ONLY fields that are explicitly mentioned in the current message.
+- Do NOT include fields that are not in the current message — omit them entirely.
+- NEVER set any field to null, 0, or empty string. Omit it instead.
+- Do NOT copy or repeat values from Current Fields into your response.
+- If a district name like "บางพลี" appears, extract it into "area".
 
-Current Fields: ${JSON.stringify(currentFields)}
+Current Fields (for reference only — do NOT repeat these in your response):
+${JSON.stringify(currentFields)}
+
 Message: """${message}"""
 `;
 }

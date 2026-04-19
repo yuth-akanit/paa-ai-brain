@@ -108,19 +108,33 @@ function heuristicExtract(message: string, currentFields: ExtractedCaseFields = 
 }
 
 export async function extractStructuredFields(message: string, currentFields: ExtractedCaseFields = {}, imageBase64?: string | null, options?: { disableRemote?: boolean }) {
+  // Always compute heuristic baseline first — it handles things like short name detection
+  // and is used as a fallback if the remote AI misses fields.
+  const heuristicBase = heuristicExtract(message, currentFields);
+
   try {
     const raw = await runJsonCompletion(buildExtractionPrompt(message, currentFields), { ...options, imageBase64 });
 
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Strip null / empty-string values that the AI returns for "not found" fields.
+      // These must NEVER override already-known values from currentFields or heuristic.
+      const cleanParsed: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (v !== null && v !== undefined && v !== "" && v !== 0) {
+          cleanParsed[k] = v;
+        }
+      }
+      // Layer: currentFields < heuristic < AI (all non-null)
       return extractedFieldsSchema.parse({
         ...currentFields,
-        ...parsed
+        ...heuristicBase,
+        ...cleanParsed
       });
     }
   } catch {
     // Fall through to heuristics.
   }
 
-  return heuristicExtract(message, currentFields);
+  return heuristicBase;
 }

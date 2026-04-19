@@ -20,10 +20,15 @@ import type { CaseSummaryPayload, ExtractedCaseFields, IntentName, ServiceType }
 import { isMeaningful, joinMeaningful } from "../utils";
 
 function mergeFields(current: ExtractedCaseFields, next: ExtractedCaseFields): ExtractedCaseFields {
-  return {
-    ...current,
-    ...next
-  };
+  // Only apply values from `next` that are actually set — never let null/empty/0 wipe a
+  // previously-known value (e.g. AI returning service_type:null should not erase "cleaning").
+  const result: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(next)) {
+    if (value !== null && value !== undefined && value !== "" && value !== 0) {
+      result[key] = value;
+    }
+  }
+  return result as ExtractedCaseFields;
 }
 
 function buildSummary(args: {
