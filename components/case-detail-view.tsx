@@ -2,9 +2,8 @@ import Link from "next/link";
 import { IntentBadge } from "@/components/intent-badge";
 import { MockScenarioSwitcher } from "@/components/mock-scenario-switcher";
 import { StatusBadge } from "@/components/status-badge";
+import { getLineChannelDescriptor } from "@/lib/line/channel-descriptor";
 import { formatThaiDate } from "@/lib/utils";
-import { isMockMode } from "@/lib/config/app-mode";
-import { readSourceChannelDisplay } from "@/lib/line/channel-descriptor";
 import type { DryRunScenario } from "@/lib/dry-run/scenario-catalog";
 import type { SimulateResult } from "@/lib/dry-run/simulate";
 
@@ -42,9 +41,12 @@ export function CaseDetailView({
   const providedName = extracted.customer_name || null;
   const primaryName = lineDisplayName || providedName || "ยังไม่ทราบชื่อลูกค้า";
   const showProvidedName = Boolean(lineDisplayName && providedName && lineDisplayName !== providedName);
-  const channelLabel =
-    readSourceChannelDisplay(thread?.metadata) ||
-    (isMockMode() ? "LINE OA / mock mode" : "LINE OA");
+  const sourceChannelMeta = (thread?.metadata as Record<string, any> | undefined)?.source_channel;
+  const sourceChannel = getLineChannelDescriptor({
+    provider: thread?.channel_provider || sourceChannelMeta?.provider || "line",
+    accountKey: sourceChannelMeta?.account_key,
+    channelPlatformId: sourceChannelMeta?.channel_platform_id
+  });
 
   // Helper to compare values and return a status badge
   const CompareStatus = ({ label, expected, actual }: { label: string; expected: any; actual: any }) => {
@@ -191,7 +193,10 @@ export function CaseDetailView({
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">ช่องทาง</p>
-              <p className="mt-2 font-medium text-slate-900">{channelLabel}</p>
+              <p className="mt-2 font-medium text-slate-900">{sourceChannel.label}</p>
+              {sourceChannel.channelPlatformId ? (
+                <p className="mt-1 text-xs text-slate-500">Channel ID: {sourceChannel.channelPlatformId}</p>
+              ) : null}
             </div>
           </div>
         </div>

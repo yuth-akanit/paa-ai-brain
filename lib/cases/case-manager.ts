@@ -135,6 +135,8 @@ function resolveIntentWithCaseContext(args: {
   const previousIntent = args.existingCase?.ai_intent as IntentName | undefined;
   const missingFields = Array.isArray(args.existingCase?.missing_fields) ? args.existingCase.missing_fields : [];
   const weakFollowUpIntent =
+    args.classifiedIntent === "faq_pricing" ||
+    args.classifiedIntent === "faq_service_area" ||
     args.classifiedIntent === "faq_contact" ||
     args.classifiedIntent === "general_inquiry" ||
     args.classifiedIntent === "greeting" ||
@@ -215,8 +217,13 @@ export async function processCustomerMessage(params: {
     .map((message) => `${message.role}: ${message.message_text}`)
     .join("\n");
 
-  // For FAQ intents, use only fields from current message to avoid thread memory contamination
-  const isFaqIntent = intent === "faq_pricing" || intent === "faq_service_area";
+  // Preserve booking context while a service flow is still active, even if a turn is
+  // temporarily classified as pricing/service-area FAQ (e.g. customer sends address,
+  // BTU, or asks price mid-booking). Otherwise the AI forgets name/phone/address.
+  const preserveBookingContext =
+    Boolean(existingCase?.ai_intent) &&
+    ACTIVE_SERVICE_INTENTS.has(existingCase.ai_intent as IntentName);
+  const isFaqIntent = (intent === "faq_pricing" || intent === "faq_service_area") && !preserveBookingContext;
   const knownFieldsForAi = isFaqIntent
     ? { machine_type: extractedFields.machine_type, area: extractedFields.area }
     : extractedFields;

@@ -287,13 +287,15 @@ export async function updateThreadState(params: {
   lastAssistantMessageAt?: string;
   summary?: string | null;
   metadataPatch?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }) {
   const supabase = createServiceClient();
-  const { threadId, lastCustomerMessageAt, lastAssistantMessageAt, metadataPatch, ...rest } = params;
+  const { threadId, lastCustomerMessageAt, lastAssistantMessageAt, metadataPatch, metadata, ...rest } = params;
 
   const updateData: any = { ...compactObject(rest) };
   if (lastCustomerMessageAt) updateData.last_customer_message_at = lastCustomerMessageAt;
   if (lastAssistantMessageAt) updateData.last_assistant_message_at = lastAssistantMessageAt;
+  if (metadata && Object.keys(metadata).length > 0) updateData.metadata = metadata;
 
   if (metadataPatch && Object.keys(metadataPatch).length > 0) {
     const { data: existing, error: readError } = await supabase

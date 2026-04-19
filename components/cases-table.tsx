@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { IntentBadge } from "@/components/intent-badge";
 import { StatusBadge } from "@/components/status-badge";
+import { getLineChannelDescriptor } from "@/lib/line/channel-descriptor";
 import { cn, formatThaiDate } from "@/lib/utils";
-import { readSourceChannelDisplay } from "@/lib/line/channel-descriptor";
 
 type CaseRow = {
   id: string;
@@ -28,7 +28,14 @@ type CaseRow = {
     phone: string | null;
   } | null;
   conversation_threads?: {
-    metadata?: Record<string, unknown> | null;
+    channel_provider?: string | null;
+    metadata?: {
+      source_channel?: {
+        provider?: string | null;
+        account_key?: string | null;
+        channel_platform_id?: string | null;
+      } | null;
+    } | null;
   } | null;
 };
 
@@ -85,41 +92,35 @@ function shouldShowProvidedName(item: CaseRow) {
   return Boolean(lineName && providedName && lineName !== providedName);
 }
 
-function getSourceChannel(item: CaseRow) {
-  return readSourceChannelDisplay(item.conversation_threads?.metadata);
+function getChannelLabel(item: CaseRow) {
+  const sourceChannel = item.conversation_threads?.metadata?.source_channel;
+  return getLineChannelDescriptor({
+    provider: item.conversation_threads?.channel_provider || sourceChannel?.provider || "line",
+    accountKey: sourceChannel?.account_key,
+    channelPlatformId: sourceChannel?.channel_platform_id
+  }).shortLabel;
 }
 
-/* ──────────────────────────────────────────────────────
-   Mobile card for each case
-   ────────────────────────────────────────────────────── */
 function CaseCard({ item }: { item: CaseRow }) {
   return (
     <Link
       href={`/admin/cases/${item.id}`}
       className="block rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/60 transition active:scale-[0.98] active:bg-slate-50"
     >
-      {/* Top row: customer name + service type */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">
-            {getPrimaryName(item)}
-          </p>
+          <p className="truncate font-medium text-slate-900">{getPrimaryName(item)}</p>
           {shouldShowProvidedName(item) ? (
             <p className="mt-1 text-xs text-slate-500">ชื่อลูกค้าแจ้ง: {getCustomerProvidedName(item)}</p>
           ) : null}
           <p className="mt-0.5 text-xs text-slate-400">
-            {item.customers?.phone || "-"} · #{item.id.slice(0, 8)}
+            {item.customers?.phone || "-"} | #{item.id.slice(0, 8)}
           </p>
-          {getSourceChannel(item) ? (
-            <p className="mt-0.5 text-xs text-slate-500">ช่องทาง: {getSourceChannel(item)}</p>
-          ) : null}
+          <p className="mt-1 text-xs text-slate-400">{getChannelLabel(item)}</p>
         </div>
-        <p className="shrink-0 text-sm font-medium text-slate-700">
-          {formatServiceType(item.service_type)}
-        </p>
+        <p className="shrink-0 text-sm font-medium text-slate-700">{formatServiceType(item.service_type)}</p>
       </div>
 
-      {/* Badges row */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StatusBadge value={item.lead_status} />
         {item.ai_intent ? <IntentBadge value={item.ai_intent} /> : null}
@@ -128,7 +129,11 @@ function CaseCard({ item }: { item: CaseRow }) {
         ) : null}
         {item.extracted_fields?.urgency ? (
           <span className={cn("rounded-full px-2.5 py-1 text-xs", urgencyTone[item.extracted_fields.urgency] ?? "bg-slate-100 text-slate-700")}>
-            {item.extracted_fields.urgency === "high" ? "เร่งด่วน" : item.extracted_fields.urgency === "medium" ? "ปานกลาง" : "ทั่วไป"}
+            {item.extracted_fields.urgency === "high"
+              ? "เร่งด่วน"
+              : item.extracted_fields.urgency === "medium"
+                ? "ปานกลาง"
+                : "ทั่วไป"}
           </span>
         ) : null}
         {item.extracted_fields?.preferred_date ? (
@@ -136,10 +141,7 @@ function CaseCard({ item }: { item: CaseRow }) {
         ) : null}
       </div>
 
-      {/* Summary + meta */}
-      {item.summary ? (
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{item.summary}</p>
-      ) : null}
+      {item.summary ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{item.summary}</p> : null}
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
         <span>{formatMissingFields(item.missing_fields)}</span>
@@ -159,9 +161,6 @@ function CaseCard({ item }: { item: CaseRow }) {
   );
 }
 
-/* ──────────────────────────────────────────────────────
-   Main component — cards on mobile, table on desktop
-   ────────────────────────────────────────────────────── */
 export function CasesTable({ cases }: { cases: CaseRow[] }) {
   if (cases.length === 0) {
     return (
@@ -174,14 +173,12 @@ export function CasesTable({ cases }: { cases: CaseRow[] }) {
 
   return (
     <>
-      {/* ── Mobile: card list ── */}
       <div className="space-y-3 lg:hidden">
         {cases.map((item) => (
           <CaseCard key={item.id} item={item} />
         ))}
       </div>
 
-      {/* ── Desktop: full table ── */}
       <div className="hidden overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 lg:block">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -204,10 +201,8 @@ export function CasesTable({ cases }: { cases: CaseRow[] }) {
                     <p className="mt-1 text-xs text-slate-500">ชื่อลูกค้าแจ้ง: {getCustomerProvidedName(item)}</p>
                   ) : null}
                   <p className="mt-1 text-xs text-slate-500">{item.customers?.phone || "-"}</p>
+                  <p className="mt-1 text-xs text-slate-400">{getChannelLabel(item)}</p>
                   <p className="mt-2 text-xs text-slate-400">#{item.id.slice(0, 8)}</p>
-                  {getSourceChannel(item) ? (
-                    <p className="mt-1 text-xs text-slate-500">ช่องทาง: {getSourceChannel(item)}</p>
-                  ) : null}
                 </td>
                 <td className="px-6 py-4 text-slate-700">
                   <div className="space-y-2">
@@ -217,10 +212,16 @@ export function CasesTable({ cases }: { cases: CaseRow[] }) {
                       {isManualTakeover(item) ? (
                         <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">แอดมินรับช่วงเอง</span>
                       ) : null}
-                      {item.extracted_fields?.area ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{item.extracted_fields.area}</span> : null}
+                      {item.extracted_fields?.area ? (
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{item.extracted_fields.area}</span>
+                      ) : null}
                       {item.extracted_fields?.urgency ? (
                         <span className={cn("rounded-full px-2.5 py-1 text-xs", urgencyTone[item.extracted_fields.urgency] ?? "bg-slate-100 text-slate-700")}>
-                          {item.extracted_fields.urgency === "high" ? "เร่งด่วน" : item.extracted_fields.urgency === "medium" ? "ปานกลาง" : "ทั่วไป"}
+                          {item.extracted_fields.urgency === "high"
+                            ? "เร่งด่วน"
+                            : item.extracted_fields.urgency === "medium"
+                              ? "ปานกลาง"
+                              : "ทั่วไป"}
                         </span>
                       ) : null}
                       {item.extracted_fields?.preferred_date ? (
