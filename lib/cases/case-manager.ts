@@ -280,6 +280,33 @@ export async function processCustomerMessage(params: {
     imageBase64: params.imageBase64
   });
 
+  // Booking-context recovery: if AI is confused (general_inquiry + should_handoff)
+  // but we're still in an active booking flow, ask next missing field instead of handing off
+  const BOOKING_SERVICE_INTENTS = ["cleaning_request","repair_request","inspection_request","relocation_request","installation_request"];
+  const previousAiIntent = existingCase?.ai_intent as string | null;
+  const isInBookingFlow = previousAiIntent && BOOKING_SERVICE_INTENTS.includes(previousAiIntent);
+  if (aiDecision.intent === "general_inquiry" && aiDecision.should_handoff && isInBookingFlow) {
+    const bookingMissing = getMissingBookingFields(currentCaseFields);
+    if (bookingMissing.length > 0) {
+      const FIELD_Q: Record<string, string> = {
+        customer_name: "ขอทราบชื่อลูกค้าด้วยได้ไหมครับ?",
+        phone: "ขอเบอร์ติดต่อด้วยได้ไหมครับ?",
+        address: "ขอที่อยู่หน้างานด้วยได้ไหมครับ?",
+        area: "ขอทราบพื้นที่หน้างานด้วยได้ไหมครับ?",
+        preferred_date: "สะดวกวันไหนครับ?",
+        preferred_time: "สะดวกช่วงเวลาไหนครับ?",
+        machine_count: "มีกี่เครื่องครับ?",
+        symptoms: "มีอาการอะไรบ้างครับ? เช่น ไม่เย็น น้ำหยด หรือมีเสียงดัง"
+      };
+      console.log(`[CASE-MANAGER] booking_flow_recovery missing=${bookingMissing[0]} intent=${previousAiIntent}`);
+      aiDecision.should_handoff = false;
+      aiDecision.intent = previousAiIntent as IntentName;
+      aiDecision.confidence = 0.85;
+      aiDecision.customer_reply = FIELD_Q[bookingMissing[0]] ?? "ขอรายละเอียดเพิ่มเติมด้วยครับ?";
+      aiDecision.missing_fields = bookingMissing as Array<keyof ExtractedCaseFields>;
+    }
+  }
+
   // Safety net: if bot has been vague ≥ 2 times recently, stop looping and escalate
   const recentVagueCount = recentMessages
     .filter(m => m.role === "assistant" && (m.metadata as Record<string, unknown>)?.intent === "general_inquiry")

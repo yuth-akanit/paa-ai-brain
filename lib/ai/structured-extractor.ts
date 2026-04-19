@@ -22,6 +22,18 @@ function heuristicExtract(message: string, currentFields: ExtractedCaseFields = 
     nextFields.customer_name = customerNameMatch[1].trim();
   }
 
+  // Context-aware: if service already known and message looks like a standalone Thai name
+  if (!nextFields.customer_name && currentFields.service_type) {
+    const trimmed = message.trim();
+    const SKIP_WORDS = ["โอเค","ได้","ครับ","ค่ะ","คะ","ใช่","เดี๋ยว","รับทราบ","ล้าง","ซ่อม","ตรวจ","ย้าย","ราคา","สวัสดี","ขอบคุณ","ไม่","ok","yes","no"];
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const isShortThai = words.length >= 1 && words.length <= 3 && /^[ก-๙\s]+$/.test(trimmed);
+    const hasSkipWord = words.some(w => SKIP_WORDS.includes(w.toLowerCase()));
+    if (isShortThai && !hasSkipWord) {
+      nextFields.customer_name = trimmed;
+    }
+  }
+
   if (phoneMatch && !nextFields.phone) {
     nextFields.phone = phoneMatch[1];
   }
