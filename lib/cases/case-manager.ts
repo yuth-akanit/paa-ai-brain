@@ -314,13 +314,47 @@ export async function processCustomerMessage(params: {
     imageBase64: params.imageBase64
   });
 
-  // Booking-context recovery: if AI is confused (general_inquiry + should_handoff)
-  // but we're still in an active booking flow, ask next missing field instead of handing off
+  // Booking-context recovery: if AI is confused while still in an active booking flow,
+  // ask next missing field instead of losing context / greeting / handing off.
+  //
+  // Catches:
+  //   • general_inquiry + should_handoff  (low-confidence, original case)
+  //   • greeting misclassification        (short Thai name like "ต่าย" classified as greeting)
+  //   • general_inquiry + should_handoff=false (frustration/confusion messages like "ขออะไร")
   const BOOKING_SERVICE_INTENTS = ["cleaning_request","repair_request","inspection_request","relocation_request","installation_request","scheduling_request"];
   const previousAiIntent = existingCase?.ai_intent as string | null;
-  const isInBookingFlow = previousAiIntent && BOOKING_SERVICE_INTENTS.includes(previousAiIntent);
-  if (aiDecision.intent === "general_inquiry" && aiDecision.should_handoff && isInBookingFlow) {
-    const isSchedulingRecovery = previousAiIntent === "scheduling_request";
+  // Also recover from service_type even if ai_intent got corrupted to greeting/general_inquiry
+  const previousServiceType2 = existingCase?.service_type as string | null;
+  const contextualPreviousIntent = previousAiIntent && BOOKING_SERVICE_INTENTS.includes(previousAiIntent)
+    ? previousAiIntent
+    : previousServiceType2 === "cleaning" ? "cleaning_request"
+    : previousServiceType2 === "repair" ? "repair_request"
+    : previousServiceType2 === "inspection" ? "inspection_request"
+    : previousServiceType2 === "relocation" ? "relocation_request"
+    : previousServiceType2 === "installation" ? "installation_request"
+    : null;
+  const isInBookingFlow = Boolean(contextualPreviousIntent);
+
+  // A genuine greeting ("สวัสดี") or genuine farewell should NOT be intercepted
+  const msgLower = params.messageText.toLowerCase().trim();
+  const isGenuineGreeting = /สวัสดี|หวัดดี/.test(msgLower);
+  const isGenuineFarewell = /ขอบคุณ|ลาก่อน|\bbye\b/.test(msgLower);
+
+  const shouldRecover =
+    isInBookingFlow &&
+    !isGenuineGreeting &&
+    !isGenuineFarewell &&
+    (
+      // Original: AI returned should_handoff for general_inquiry
+      (aiDecision.intent === "general_inquiry" && aiDecision.should_handoff) ||
+      // New: short name or answer misclassified as greeting
+      (aiDecision.intent === "greeting") ||
+      // New: frustration/confusion messages that stay general_inquiry without handoff
+      (aiDecision.intent === "general_inquiry" && !aiDecision.should_handoff)
+    );
+
+  if (shouldRecover) {
+    const isSchedulingRecovery = contextualPreviousIntent === "scheduling_request";
     const bookingMissing = isSchedulingRecovery
       ? getMissingSchedulingFields(currentCaseFields)
       : getMissingBookingFields(currentCaseFields);
@@ -335,9 +369,9 @@ export async function processCustomerMessage(params: {
         machine_count: "มีกี่เครื่องครับ?",
         symptoms: "มีอาการอะไรบ้างครับ? เช่น ไม่เย็น น้ำหยด หรือมีเสียงดัง"
       };
-      console.log(`[CASE-MANAGER] booking_flow_recovery missing=${bookingMissing[0]} intent=${previousAiIntent}`);
+      console.log(`[CASE-MANAGER] booking_flow_recovery trigger=${aiDecision.intent} missing=${bookingMissing[0]} prev=${contextualPreviousIntent}`);
       aiDecision.should_handoff = false;
-      aiDecision.intent = previousAiIntent as IntentName;
+      aiDecision.intent = contextualPreviousIntent as IntentName;
       aiDecision.confidence = 0.85;
       aiDecision.customer_reply = FIELD_Q[bookingMissing[0]] ?? "ขอรายละเอียดเพิ่มเติมด้วยครับ?";
       aiDecision.missing_fields = bookingMissing as Array<keyof ExtractedCaseFields>;
