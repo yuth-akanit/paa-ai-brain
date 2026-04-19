@@ -427,8 +427,6 @@ export async function processCustomerMessage(params: {
     preferredTime: mergedFields.preferred_time ?? null,
     missingFields: aiDecision.missing_fields
   });
-  const isScheduling = aiDecision.intent === "scheduling_request";
-  // scheduling_request: ตอบลูกค้าได้ แต่ไม่เปลี่ยน lead_status เป็น handed_off
   const leadStatus = determineLeadStatus(aiDecision.missing_fields, aiDecision.should_handoff);
   const threadStatus = aiDecision.should_handoff ? "handed_off" : leadStatus === "qualified" ? "qualified" : "waiting_customer";
 
@@ -550,32 +548,9 @@ export async function processCustomerMessage(params: {
     });
     handoffId = handoff.id;
 
-  } else if (isScheduling && !canSendBookingWebhook) {
-    // Soft notify — AI ยังตอบได้ แต่สร้าง handoff record เพื่อให้ admin เห็นในระบบว่าต้องเช็คคิว
-    // (ไม่ทำเมื่อ canSendBookingWebhook=true เพราะ booking webhook แจ้ง admin แล้ว)
-    const schedulingSummary = `ลูกค้าถามเรื่องคิวนัดหมาย: "${params.messageText}" | AI ตอบว่าจะแจ้งทีมช่างแล้ว รบกวน admin เช็คคิวและติดต่อกลับ`;
-    const schedulingSummaryPayload: CaseSummaryPayload = {
-      caseId: params.caseId,
-      customerName: mergedFields.customer_name ?? params.customerName,
-      phone: mergedFields.phone ?? null,
-      area: mergedFields.area ?? null,
-      serviceType: mergedFields.service_type ?? null,
-      symptoms: null,
-      preferredDate: mergedFields.preferred_date ?? null,
-      urgency: mergedFields.urgency ?? null,
-      leadStatus,
-      summary: schedulingSummary,
-      handoffReason: "scheduling_followup_required"
-    };
-
-    const handoff = await requestAdminHandoff({
-      caseId: params.caseId,
-      threadId: params.threadId,
-      reason: "scheduling_followup_required",
-      summaryPayload: schedulingSummaryPayload
-    });
-    handoffId = handoff.id;
   }
+  // scheduling_request mid-flow: no soft-notify.
+  // Admin is notified only when all booking fields are collected via the booking webhook.
 
   return {
     aiDecision,
