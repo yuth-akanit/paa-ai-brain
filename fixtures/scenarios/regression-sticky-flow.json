@@ -1,0 +1,28 @@
+{
+  "name": "low_signal_continue_flow",
+  "tags": ["regression", "orchestration", "sticky-intent"],
+  "severity": "critical",
+  "input": {
+    "message": "ได้ครับ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "missing_fields": ["address"],
+      "extracted_fields": {
+        "customer_name": "Akanit",
+        "phone": "0812345678",
+        "service_type": "cleaning"
+      },
+      "metadata": {
+        "last_missing_field_asked": "address"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "missing_fields": ["address", "preferred_date", "preferred_time", "machine_count"],
+    "customer_reply_includes": ["ที่อยู่", "หน้างาน"],
+    "customer_reply_not_includes": ["ล้างแอร์ / ซ่อม", "ต้องการบริการอะไร"],
+    "handoff_reason": null
+  }
+}

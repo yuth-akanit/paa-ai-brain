@@ -1,0 +1,24 @@
+{
+  "name": "regression_multiline_contact_capture",
+  "tags": ["regression", "multiline", "booking"],
+  "severity": "high",
+  "input": {
+    "message": "0850252102\nต้อม",
+    "prior_case_state": {
+      "ai_intent": "repair_request",
+      "service_type": "repair",
+      "missing_fields": ["phone", "customer_name"],
+      "extracted_fields": {
+        "service_type": "repair"
+      }
+    }
+  },
+  "expected": {
+    "intent": "repair_request",
+    "should_handoff": false,
+    "extracted_fields": {
+      "phone": "0850252102"
+    },
+    "handoff_reason": null
+  }
+}

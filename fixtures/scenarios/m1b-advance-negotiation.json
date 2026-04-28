@@ -1,0 +1,21 @@
+{
+  "name": "m1b_advance_negotiation",
+  "turns": [
+    {
+      "user": "ล้างแอร์วันนี้เลยได้ไหม",
+      "expect": {
+        "nextAction": "propose_alternative_slot",
+        "policyBlockReason": "too_soon_same_day",
+        "pendingProposal": true
+      }
+    },
+    {
+      "user": "ได้ครับ",
+      "expect": {
+        "nextAction": "reconfirm_slot",
+        "stateAdvanced": true,
+        "pendingProposal": false
+      }
+    }
+  ]
+}

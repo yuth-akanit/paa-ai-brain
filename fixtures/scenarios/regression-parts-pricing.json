@@ -1,0 +1,24 @@
+{
+  "name": "parts_pricing_in_inspection_flow",
+  "tags": ["regression", "canonical", "inspection", "pricing"],
+  "severity": "high",
+  "description": "ลูกค้าถามค่าอะไหล่ขณะอยู่ใน inspection flow — ต้องตอบราคาอะไหล่ ไม่ใช่ booking loop",
+  "input": {
+    "message": "ค่าอะไหล่แพงไหมครับ",
+    "prior_case_state": {
+      "extracted_fields": {
+        "service_type": "inspection"
+      },
+      "meta": {
+        "active_flow": "inspection_booking",
+        "last_prompt_type": "booking_name"
+      }
+    }
+  },
+  "expected": {
+    "intent": "general_inquiry",
+    "should_handoff": false,
+    "customer_reply_includes": ["อะไหล่", "บาท"],
+    "customer_reply_not_includes": ["ชื่อลูกค้า", "เบอร์โทร"]
+  }
+}

@@ -1,15 +1,22 @@
 import { buildIntentPrompt } from "./prompts";
 import { runJsonCompletion } from "./client";
 import type { ExtractedCaseFields, IntentName } from "../types";
+import { looksLikeThaiAddress } from "../cases/conversation-signals";
+
+function isThaiAddressOnly(text: string): boolean {
+  return looksLikeThaiAddress(text) && text.length < 200;
+}
 
 const heuristicMap: Array<{ intent: IntentName; keywords: string[] }> = [
-  { intent: "closing", keywords: ["ขอบคุณ", "ขอบใจ", "thank you", "ขอบคุณมาก", "โอเคครับ", "โอเคค่ะ", "รับทราบครับ", "รับทราบค่ะ"] },
+  { intent: "closing", keywords: ["ขอบคุณ", "ขอบใจ", "thank you", "ขอบคุณมาก", "ลาก่อน"] },
+  { intent: "low_signal_ack", keywords: ["ได้ครับ", "ได้ค่ะ", "โอเค", "ok", "โอเคครับ", "โอเคค่ะ", "รับทราบครับ", "รับทราบค่ะ", "yes", "sure"] },
   { intent: "admin_handoff", keywords: ["แอดมิน", "เจ้าหน้าที่", "คนจริง", "ติดต่อกลับ", "ขอคุยกับคน"] },
-  { intent: "repair_request", keywords: ["ไม่เย็น", "เสีย", "ซ่อม", "น้ำหยด", "เสียงดัง"] },
+  { intent: "repair_request", keywords: ["ไม่เย็น", "เสีย", "ซ่อม", "น้ำหยด", "เสียงดัง", "ไม่ทำงาน"] },
   { intent: "inspection_request", keywords: ["ตรวจ", "เช็ค", "ประเมิน", "ดูหน้างาน"] },
-  { intent: "cleaning_request", keywords: ["ล้างแอร์", "ทำความสะอาด"] },
+  { intent: "cleaning_request", keywords: ["ล้าง", "ทำความสะอาด"] },
   { intent: "relocation_request", keywords: ["ย้ายแอร์", "ย้ายเครื่อง"] },
-  { intent: "installation_request", keywords: ["ติดตั้งแอร์", "ติดตั้งเครื่อง", "ติดใหม่", "แอร์ใหม่", "ซื้อแอร์"] },
+  { intent: "installation_request", keywords: ["ติดตั้งแอร์", "ติดตั้งเครื่อง", "ติดใหม่", "แอร์ใหม่"] },
+  { intent: "product_availability_query", keywords: ["มีแอร์ขาย", "ขายแอร์", "ขายเครื่อง", "ซื้อแอร์", "สั่งซื้อ"] },
   { intent: "cold_room_request", keywords: ["ห้องเย็น", "cold room"] },
   { intent: "faq_pricing", keywords: ["ราคา", "กี่บาท", "ค่าล้าง", "ค่าบริการ", "เท่าไหร่", "เริ่มต้น"] },
   { intent: "faq_service_area", keywords: ["พื้นที่", "แถว", "รับงาน", "จังหวัด", "รับไหม"] },
@@ -111,7 +118,7 @@ function inferOngoingIntent(knownFields: ExtractedCaseFields): IntentName | null
   if (svc === "cold_room") return "cold_room_request";
   if (knownFields.symptoms) return "repair_request";
   if (knownFields.preferred_date || knownFields.preferred_time) return "scheduling_request";
-  if (knownFields.customer_name || knownFields.phone || knownFields.area) return "cleaning_request";
+  if (knownFields.customer_name || knownFields.phone || knownFields.area || knownFields.address) return "cleaning_request";
   return null;
 }
 
@@ -123,11 +130,57 @@ export async function classifyIntent(
 ): Promise<{ intent: IntentName; confidence: number }> {
   const lowerMessage = message.toLowerCase();
 
-  // If the message is just a phone number, treat it as data provision in the ongoing
-  // booking flow — never classify as faq_contact.
-  if (!imageBase64 && isPhoneNumberOnly(lowerMessage)) {
+  // If the message is just a phone number or address, treat it as data provision.
+  const isAddr = isThaiAddressOnly(message);
+  if (!imageBase64 && (isPhoneNumberOnly(lowerMessage) || isAddr)) {
     const ongoing = knownFields ? inferOngoingIntent(knownFields) : null;
+    console.log(`[INTENT] Address/Phone detected (isAddr=${isAddr}). Ongoing: ${ongoing}`);
     return { intent: ongoing ?? "general_inquiry", confidence: 0.85 };
+  }
+
+  // Purely short affirmative messages (strip common Thai polite endings)
+  const affirmText = lowerMessage.replace(/(ครับ|ค่ะ||นะ|ครับผม|คะ)$/g, "").trim();
+  if (["ได้", "โอเค", "ok", "yes", "ตกลง", "รับทราบ"].includes(affirmText)) {
+    return { intent: "low_signal_ack", confidence: 0.94 };
+  }
+
+  // RELOCATION intent PRIORITY — must be checked early to avoid pricing collisions
+  const hasRelocationKeyword = /(ย้ายแอร์|ย้ายเครื่อง|ถอดย้าย|ย้ายจาก|ย้ายลง|ย้ายขึ้น)/.test(lowerMessage);
+  const hasPriceWord = /(ราคา|เท่าไหร่|กี่บาท|คิดยังไง)/.test(lowerMessage);
+  if (hasRelocationKeyword) {
+    if (hasPriceWord) return { intent: "relocation_pricing_query", confidence: 0.96 };
+    return { intent: "relocation_request", confidence: 0.96 };
+  }
+
+  // AVAILABILITY intent PRIORITY — distinct from general scheduling
+  const hasAvailabilityWord = /(มีคิวว่างไหม|ว่างไหม|มีคิวไหม|คิวว่าง|นัดได้ไหม)/.test(lowerMessage);
+  if (hasAvailabilityWord) {
+    return { intent: "availability_query", confidence: 0.95 };
+  }
+
+  // SALES PRODUCT AVAILABILITY PRIORITY
+  const isProductAvailability = /มีแอร์ขายไหม|ที่ร้านมีแอร์ขายไหม|ขายแอร์ไหม|แอร์ขายไหม|มีขายไหม/.test(lowerMessage);
+  if (isProductAvailability && !lowerMessage.includes("รับสมัคร") && !lowerMessage.includes("ล้าง")) {
+     return { intent: "product_availability_query", confidence: 0.98 };
+  }
+
+  // SALES intent PRIORITY — recognize buying/selling/parts/ordering
+  const hasSalesKeyword = /(ขาย|ซื้อ|มีแอร์|อะไหล่|สั่ง)/.test(lowerMessage);
+  if (hasSalesKeyword && !lowerMessage.includes("รับสมัคร") && !lowerMessage.includes("ล้าง")) {
+     return { intent: "sales_inquiry", confidence: 0.95 };
+  }
+
+  // REPAIR intent PRIORITY — must win over pricing/cleaning if repair symptoms are mentioned
+  const hasRepairKeyword = /(ซ่อม|เสีย|ไม่เย็น|หยด|รั่ว|เสียงดัง|สั่น|มอเตอร์ดัง|ดังผิดปกติ|พัง)/.test(lowerMessage);
+  const isCleaningMenu = lowerMessage.includes("ราคาล้าง") || lowerMessage.includes("ล้างแอร์ราคา");
+  if (hasRepairKeyword && !isCleaningMenu) {
+     return { intent: "repair_request", confidence: 0.96 };
+  }
+
+  // M3A.1: Availability pivot detection — prioritize over generic booking intents
+  const isAvailabilityQuery = /วันไหน|ว่างวัน|คิวว่าง|ว่างไหม|มีคิว/.test(lowerMessage);
+  if (!imageBase64 && isAvailabilityQuery && !knownFields?.preferred_date) {
+    return { intent: "scheduling_request", confidence: 0.94 };
   }
 
   // Installation intent — must be checked before pricing so "ติดตั้งแอร์ราคาเท่าไหร่"
@@ -136,10 +189,16 @@ export async function classifyIntent(
     return { intent: "installation_request", confidence: 0.94 };
   }
 
+  // COMMERCIAL/DUCT PRICING intent — "แอร์ดัก คิดเท่าไหร่"
+  const isDuctAir = /แอร์ดัก|แอร์ต่อท่อ|duct|แอร์แขวน|แอร์ฝังฝ้า|แอร์ 4 ทิศทาง|พาณิชย์|โรงงาน|ห้าง|งานกลางคืน|สำนักงาน/.test(lowerMessage);
+  if (isDuctAir && hasPriceWord) {
+    return { intent: "commercial_pricing_query", confidence: 0.96 };
+  }
+
   // Booking intent MUST be checked before pricing — "จะจองล้างแอร์" contains cleaning
   // keywords but is NOT a pricing question
   if (!imageBase64 && isBookingIntent(lowerMessage)) {
-    if (lowerMessage.includes("ซ่อม")) return { intent: "repair_request", confidence: 0.93 };
+    if (lowerMessage.includes("ซ่อม") || lowerMessage.includes("หยด") || lowerMessage.includes("ไม่เย็น")) return { intent: "repair_request", confidence: 0.93 };
     if (lowerMessage.includes("ตรวจ")) return { intent: "inspection_request", confidence: 0.93 };
     if (lowerMessage.includes("ย้าย")) return { intent: "relocation_request", confidence: 0.93 };
     if (lowerMessage.includes("ติดตั้ง")) return { intent: "installation_request", confidence: 0.93 };
@@ -231,7 +290,12 @@ export async function classifyIntent(
     if (lowerMessage.includes("ย้าย")) return { intent: "relocation_request", confidence: 0.88 };
     if (lowerMessage.includes("ซ่อม")) return { intent: "repair_request", confidence: 0.88 };
     const otherNonStandard = ["รื้อ", "เติมน้ำยา", "ห้องเย็น", "โรงงาน"].some(k => lowerMessage.includes(k));
-    if (otherNonStandard) return { intent: "general_inquiry", confidence: 0.3 };
+    if (otherNonStandard) {
+      if (imageBase64) {
+        return { intent: "general_inquiry", confidence: 0.5 };
+      }
+      return { intent: "general_inquiry", confidence: 0.3 };
+    }
   }
 
   return {

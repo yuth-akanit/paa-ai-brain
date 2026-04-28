@@ -1,0 +1,11 @@
+{
+  "name": "greeting_short",
+  "input": {
+    "message": "สวัสดี"
+  },
+  "expected": {
+    "intent": "greeting",
+    "should_handoff": false,
+    "customer_reply_includes": ["สวัสดี", "PAA"]
+  }
+}

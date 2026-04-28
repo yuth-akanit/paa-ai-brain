@@ -1,0 +1,25 @@
+{
+  "name": "availability_conflict_detection",
+  "tags": ["regression", "milestone-1", "scheduling"],
+  "severity": "high",
+  "input": {
+    "message": "วันเสาร์ไม่สะดวกครับ สวนนี้ไม่ว่าง",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning",
+        "preferred_date": "เสาร์หน้า"
+      },
+      "metadata": {
+        "availability_flow_state": "none"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["สะดวก", "วัน"],
+    "handoff_reason": null
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "m1a_slot_unavailable_offer_alternative",
+  "tags": ["regression", "milestone-1a", "scheduling"],
+  "severity": "high",
+  "input": {
+    "message": "เอาเป็นวันเสาร์ช่วงเช้าได้ไหมครับ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning"
+      },
+      "metadata": {
+        "availability_flow_state": "none"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["เลือก", "เต็ม", "บ่าย"],
+    "customer_reply_not_includes": ["สวัสดีครับ", "ยินดีให้บริการ"],
+    "handoff_reason": null
+  }
+}

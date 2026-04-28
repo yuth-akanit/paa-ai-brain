@@ -1,0 +1,23 @@
+{
+  "name": "m2_mixed_unit_pricing_buckets",
+  "tags": ["regression", "milestone-2", "pricing"],
+  "severity": "high",
+  "input": {
+    "message": "ล้างแอร์ครับ 2 ติดผนัง แล้วก็อีก 1 cassette ครับ",
+    "prior_case_state": {
+      "ai_intent": "greeting",
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ติดผนัง", "2 เครื่อง", "1 เครื่อง", "สรุปรายการ"],
+    "extracted_fields": {
+      "pricing_buckets": [
+        { "machine_type": "wall", "quantity": 2 },
+        { "machine_type": "cassette", "quantity": 1 }
+      ]
+    }
+  }
+}

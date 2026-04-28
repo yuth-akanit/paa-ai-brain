@@ -1,0 +1,20 @@
+{
+  "name": "m1b_sunday_closed",
+  "tags": ["regression", "milestone-1b", "scheduling"],
+  "severity": "high",
+  "metadata": { "milestone": "m1b", "status": "active_contract" },
+  "input": {
+    "message": "จองล้างแอร์วันอาทิตย์นี้ครับ 2 เครื่อง",
+    "prior_case_state": {
+      "ai_intent": "greeting",
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "nextAction": "propose_alternative_slot",
+    "policyBlockReason": "sunday_closed",
+    "customer_reply_includes": ["หยุดทำการ", "วันเสาร์", "บ่าย"]
+  }
+}

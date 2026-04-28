@@ -1,6 +1,6 @@
 import { getEnv } from "@/lib/env";
 import { processCustomerMessage } from "@/lib/cases/case-manager";
-import { createAuditLog, createConversationMessage, findOrCreateCustomerByChannel, getOrCreateOpenThread, getOrCreateServiceCase, updateThreadState } from "@/lib/db/queries";
+import { createAuditLog, createConversationMessage, findOrCreateCustomerByChannel, getOrCreateOpenThread, getOrCreateServiceCase, messageExistsByProviderId, updateThreadState } from "@/lib/db/queries";
 import { getMessageContent, replyLineMessage } from "@/lib/line/client";
 import { verifyLineSignature } from "@/lib/line/verify-signature";
 import { lineWebhookBodySchema } from "@/lib/schemas";
@@ -35,6 +35,12 @@ export async function POST(request: Request) {
 
     for (const event of parsedBody.data.events) {
       if (event.type !== "message" || !event.source.userId) {
+        continue;
+      }
+
+      // Deduplicate: LINE occasionally delivers the same message twice
+      if (event.message.id && await messageExistsByProviderId(event.message.id)) {
+        console.log(`[LINE_WEBHOOK] Duplicate message skipped: ${event.message.id}`);
         continue;
       }
 
@@ -99,13 +105,14 @@ export async function POST(request: Request) {
         action: "line_webhook_processed",
         payload: {
           lineUserId: event.source.userId,
-          intent: result.aiDecision.intent,
-          handoffId: result.handoffId
+          intent: result.intent,
+          decisionSource: result.decisionSource,
+          errorCode: result.errorCode
         }
       });
 
-      if (event.replyToken && result.aiDecision.customer_reply) {
-        await replyLineMessage(event.replyToken, result.aiDecision.customer_reply);
+      if (event.replyToken && result.customerReply) {
+        await replyLineMessage(event.replyToken, result.customerReply);
       }
     }
 
@@ -113,6 +120,7 @@ export async function POST(request: Request) {
       ok: true
     });
   } catch (error) {
+    console.error(`[LINE_WEBHOOK_ERROR]`, error);
     return jsonResponse(
       {
         error: error instanceof Error ? error.message : "internal_error"

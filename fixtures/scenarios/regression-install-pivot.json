@@ -1,0 +1,22 @@
+{
+  "name": "install_pricing_vs_cleaning_context",
+  "tags": ["regression", "milestone-2", "pivot"],
+  "severity": "critical",
+  "input": {
+    "message": "ติดตั้งแอร์ราคาเท่าไหร่",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "service_type": "cleaning",
+        "machine_count": 3
+      }
+    }
+  },
+  "expected": {
+    "intent": "installation_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ติดตั้ง", "BTU"],
+    "customer_reply_not_includes": ["ล้างแอร์ติดผนังเริ่มต้น 500"],
+    "handoff_reason": null
+  }
+}

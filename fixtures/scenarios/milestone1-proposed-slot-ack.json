@@ -1,0 +1,32 @@
+{
+  "name": "availability_proposed_slot_ack",
+  "tags": [
+    "regression",
+    "milestone-1",
+    "scheduling"
+  ],
+  "severity": "high",
+  "input": {
+    "message": "โอเคครับ ได้เลย",
+    "prior_case_state": {
+      "ai_intent": "scheduling_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning",
+        "preferred_date": "วีนจันทร์หน้า"
+      },
+      "metadata": {
+        "availability_flow_state": "proposed_alternative_slot"
+      }
+    }
+  },
+  "expected": {
+    "intent": "scheduling_request",
+    "should_handoff": false,
+    "customer_reply_includes": [
+      "รับทราบ",
+      "เบอร์"
+    ],
+    "handoff_reason": null
+  }
+}

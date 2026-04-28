@@ -1,0 +1,23 @@
+{
+  "name": "m2_mixed_known_unknown",
+  "tags": ["regression", "milestone-2", "pricing"],
+  "severity": "high",
+  "input": {
+    "message": "ล้างติดผนัง 2 เครื่องครับ ส่วนอีกตัวผมไม่แน่ใจรุ่น",
+    "prior_case_state": {
+      "ai_intent": "greeting",
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ติดผนัง 2 เครื่อง", "1 เครื่อง", "ยังไม่ทราบประเภท", "ขอข้อมูล"],
+    "extracted_fields": {
+      "pricing_buckets": [
+        { "machine_type": "wall", "quantity": 2 },
+        { "machine_type": "unknown", "quantity": 1 }
+      ]
+    }
+  }
+}

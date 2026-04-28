@@ -1,0 +1,25 @@
+{
+  "name": "m1b_correction_negotiation",
+  "turns": [
+    {
+      "user": "จองล้างแอร์วันอาทิตย์นี้",
+      "expect": {
+        "nextAction": "propose_alternative_slot",
+        "policyBlockReason": "sunday_closed",
+        "pendingProposal": true
+      }
+    },
+    {
+      "user": "ไม่เอาครับ ขอเป็นวันจันทร์หน้าตอนเช้าแทน",
+      "expect": {
+        "nextAction": "reconfirm_slot",
+        "stateAdvanced": true,
+        "pendingProposal": false,
+        "extracted_fields": {
+          "preferred_date": "วันจันทร์หน้า",
+          "preferred_time": "ตอนเช้า"
+        }
+      }
+    }
+  ]
+}

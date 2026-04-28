@@ -1,0 +1,46 @@
+{
+  "name": "m1a_reject_alternative_request_new",
+  "tags": [
+    "regression",
+    "milestone-1a",
+    "scheduling"
+  ],
+  "severity": "high",
+  "input": {
+    "message": "ไม่สะดวกครับ ขอเป็นวันจันทร์เช้าแทน",
+    "prior_case_state": {
+      "ai_intent": "scheduling_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning",
+        "preferred_date": "วันเสาร์",
+        "preferred_time": "ช่วงบ่าย"
+      },
+      "metadata": {
+        "availability_flow_state": "proposed_alternative_slot",
+        "last_proposed_slot": {
+          "date": "วันจันทร์",
+          "time": "เช้า"
+        },
+        "pending_proposal": true
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": [
+      "รับทราบ",
+      "เบอร์"
+    ],
+    "customer_reply_not_includes": [
+      "ยินดีให้บริการ",
+      "สวัสดีครับ"
+    ],
+    "handoff_reason": null,
+    "extracted_fields": {
+      "preferred_date": "วันจันทร์เช้า",
+      "preferred_time": "เช้า"
+    }
+  }
+}

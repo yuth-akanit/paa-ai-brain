@@ -1,0 +1,19 @@
+{
+  "name": "Orchestration Regression - Low Signal Noise",
+  "tags": ["regression", "orchestration"],
+  "severity": "high",
+  "input": {
+    "message": "vvv",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "missing_fields": ["phone"],
+      "extracted_fields": { "customer_name": "ต่าย" }
+    }
+  },
+  "expected": {
+    "intent": "general_inquiry",
+    "should_handoff": true,
+    "customer_reply_includes": ["รายละเอียด"],
+    "handoff_reason": "low_confidence_or_policy_limit"
+  }
+}

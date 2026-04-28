@@ -1,0 +1,25 @@
+{
+  "name": "regression_labeled_contact_capture",
+  "tags": ["regression", "labeled", "booking"],
+  "severity": "high",
+  "input": {
+    "message": "👤 ชื่อ: คุณต้อม\n📞 เบอร์: 0850252102",
+    "prior_case_state": {
+      "ai_intent": "repair_request",
+      "service_type": "repair",
+      "missing_fields": ["customer_name", "phone"],
+      "extracted_fields": {
+        "service_type": "repair"
+      }
+    }
+  },
+  "expected": {
+    "intent": "repair_request",
+    "should_handoff": false,
+    "extracted_fields": {
+      "customer_name": "ต้อม",
+      "phone": "0850252102"
+    },
+    "handoff_reason": null
+  }
+}

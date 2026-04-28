@@ -1,0 +1,23 @@
+{
+  "name": "Orchestration Regression - Pricing Fragment",
+  "tags": ["regression", "orchestration"],
+  "severity": "critical",
+  "input": {
+    "message": "ติดผนัง 12000",
+    "prior_case_state": {
+      "ai_intent": "faq_pricing",
+      "missing_fields": ["machine_type"],
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "faq_pricing",
+    "should_handoff": false,
+    "missing_fields": [],
+    "extracted_fields": {
+      "machine_type": "wall"
+    },
+    "customer_reply_includes": ["เริ่มต้น"],
+    "handoff_reason": null
+  }
+}

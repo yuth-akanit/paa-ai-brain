@@ -1,6 +1,36 @@
 import { compactObject } from "../utils";
 import { createServiceClient } from "./supabase";
-import type { AiDecision, CaseSummaryPayload, ChannelProvider, ExtractedCaseFields, HandoffStatus, LeadStatus, ThreadStatus } from "../types";
+import type { AiDecision, CaseSummaryPayload, ChannelProvider, CustomerChannelType, ExtractedCaseFields, HandoffStatus, LeadStatus, ThreadStatus } from "../types";
+
+export function normalizeCustomerChannelType(provider: ChannelProvider | "phone" | "email"): CustomerChannelType {
+  switch (provider) {
+    case "facebook":
+      return "messenger";
+    case "line":
+      return "line";
+    case "phone":
+      return "phone";
+    case "email":
+      return "email";
+    default:
+      throw new Error(`Unsupported customer channel provider for persistence: ${provider}`);
+  }
+}
+
+async function findLegacyCustomerByExternalId(externalUserId: string) {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("phone_digits", externalUserId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch legacy customer by external id: ${error.message}`);
+  }
+
+  return data;
+}
 
 export async function findOrCreateCustomerByChannel(params: {
   provider: ChannelProvider;
@@ -8,6 +38,7 @@ export async function findOrCreateCustomerByChannel(params: {
   displayName?: string | null;
 }) {
   const supabase = createServiceClient();
+  const dbChannelType = normalizeCustomerChannelType(params.provider);
   
   // 1. Get channel first
   const { data: channel, error: channelError } = await supabase
@@ -62,6 +93,11 @@ export async function findOrCreateCustomerByChannel(params: {
 
     customer = legacyInsert.data;
     customerError = legacyInsert.error;
+
+    if (customerError?.message.includes("customers_phone_digits_uq")) {
+      customer = await findLegacyCustomerByExternalId(params.externalUserId);
+      customerError = customer ? null : customerError;
+    }
   }
 
   if (customerError) {
@@ -83,7 +119,7 @@ export async function findOrCreateCustomerByChannel(params: {
       customer_id: customer.id,
       provider: params.provider,
       external_user_id: params.externalUserId,
-      channel_type: params.provider,
+      channel_type: dbChannelType,
       channel_value: params.externalUserId
     } as never);
 
@@ -95,7 +131,7 @@ export async function findOrCreateCustomerByChannel(params: {
       customer_id: customer.id,
       provider: params.provider,
       external_user_id: params.externalUserId,
-      channel_type: params.provider,
+      channel_type: dbChannelType,
       channel_value: params.externalUserId
     } as never);
 
@@ -191,9 +227,6 @@ export async function getOrCreateServiceCase(threadId: string, customerId: strin
     throw new Error(`Failed to fetch case: ${existingError.message}`);
   }
 
-  // If the latest case is closed, don't reuse it — start a fresh case so stale
-  // extracted_fields (machine_type, preferred_date, etc.) from the previous
-  // completed booking do not contaminate the new conversation.
   if (existing && existing.lead_status !== "closed") {
     return existing;
   }
@@ -213,6 +246,23 @@ export async function getOrCreateServiceCase(threadId: string, customerId: strin
   }
 
   return created;
+}
+
+export async function getServiceCase(channelUserId: string, provider: ChannelProvider = "line") {
+  const customer = await findOrCreateCustomerByChannel({
+    provider,
+    externalUserId: channelUserId
+  });
+  const thread = await getOrCreateOpenThread(customer.id, provider);
+  const serviceCase = await getOrCreateServiceCase(thread.id, customer.id);
+  
+  return {
+    customer,
+    thread,
+    serviceCase,
+    customerId: customer.id,
+    threadId: thread.id
+  };
 }
 
 export async function getServiceCaseById(caseId: string) {
@@ -255,6 +305,16 @@ export async function createConversationMessage(params: {
   return data;
 }
 
+export async function messageExistsByProviderId(providerMessageId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { count, error } = await supabase
+    .from("conversation_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("provider_message_id", providerMessageId);
+  if (error) return false;
+  return (count ?? 0) > 0;
+}
+
 export async function getThreadMessages(threadId: string, limit = 30, caseId?: string) {
   const supabase = createServiceClient();
   let query = supabase
@@ -262,9 +322,6 @@ export async function getThreadMessages(threadId: string, limit = 30, caseId?: s
     .select("*")
     .eq("thread_id", threadId);
 
-  // When caseId is provided, scope to the current case only. This prevents
-  // messages from previously-closed cases (e.g. a finished booking) from
-  // leaking into the AI prompt as stale context.
   if (caseId) {
     query = query.eq("case_id", caseId);
   }
@@ -330,6 +387,7 @@ export async function updateCaseState(params: {
   aiConfidence?: number | null;
   summary?: string | null;
   handoffReason?: string | null;
+  metadata?: Record<string, any>;
 }) {
   const supabase = createServiceClient();
   const { caseId, ...rest } = params;
@@ -590,7 +648,6 @@ export async function getFollowUpCandidates(hoursSinceLastMessage: number = 24) 
   const supabase = createServiceClient();
   const cutoff = new Date(Date.now() - hoursSinceLastMessage * 60 * 60 * 1000).toISOString();
 
-  // Step 1: Get stale cases with their threads
   const { data: cases, error } = await supabase
     .from("service_cases")
     .select(`
@@ -608,24 +665,21 @@ export async function getFollowUpCandidates(hoursSinceLastMessage: number = 24) 
 
   if (!cases || cases.length === 0) return [];
 
-  // Step 2: Filter by follow-up count (stored in thread metadata)
-  const filtered = cases.filter(c => {
+  const filtered = cases.filter((c: any) => {
     const thread = c.conversation_threads;
     const meta = (thread as any)?.metadata || {};
     return (meta.follow_up_count || 0) < 2;
   });
 
-  // Step 3: Get LINE channels for these customers
-  const customerIds = [...new Set(filtered.map(c => c.customer_id))];
+  const customerIds = [...new Set(filtered.map((c: any) => c.customer_id))];
   const { data: channels } = await supabase
     .from("customer_channels")
     .select("*")
     .in("customer_id", customerIds)
     .eq("provider", "line");
 
-  // Step 4: Attach LINE user ID to each candidate
-  const channelMap = new Map((channels ?? []).map(ch => [ch.customer_id, ch]));
-  return filtered.map(c => ({
+  const channelMap = new Map((channels ?? []).map((ch: any) => [ch.customer_id, ch]));
+  return filtered.map((c: any) => ({
     ...c,
     line_channel: channelMap.get(c.customer_id) ?? null
   }));
@@ -649,6 +703,5 @@ export async function markFollowUpSent(caseId: string, threadId: string, current
     throw new Error(`Failed to update thread metadata for follow-up: ${error.message}`);
   }
 
-  // Also touch the case to update its updated_at
   await supabase.from("service_cases").update({ updated_at: new Date().toISOString() }).eq("id", caseId);
 }

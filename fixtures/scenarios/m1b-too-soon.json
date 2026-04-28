@@ -1,0 +1,19 @@
+{
+  "name": "m1b_too_soon",
+  "tags": ["regression", "milestone-1b", "scheduling"],
+  "severity": "high",
+  "input": {
+    "message": "ล้างแอร์ 3 เครื่อง วันนี้เลยได้ไหมครับ",
+    "prior_case_state": {
+      "ai_intent": "greeting",
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "nextAction": "propose_alternative_slot",
+    "policyBlockReason": "too_soon_same_day",
+    "customer_reply_includes": ["ไม่สามารถนัดหมายในวันเดียวกัน", "พรุ่งนี้"]
+  }
+}

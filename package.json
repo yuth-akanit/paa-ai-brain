@@ -12,7 +12,8 @@
     "dry-run:line": "bash scripts/dry-run-simulate.sh line repair_request_basic",
     "dry-run:handoff": "bash scripts/dry-run-simulate.sh handoff",
     "dry-run:regression": "npx tsx scripts/dry-run-regression.ts",
-    "test:regression": "npx tsx scripts/regression-cli.ts"
+    "test:regression": "npx tsx scripts/regression-cli.ts",
+    "test:repair-regressions": "npx tsx scripts/verify-repair-regressions.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",

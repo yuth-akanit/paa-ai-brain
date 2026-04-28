@@ -31,8 +31,9 @@ export function compactObject<T extends Record<string, unknown>>(value: T) {
         return item.trim().length > 0;
       }
 
+      // Preserve empty arrays as they are often used to clear state (e.g. missing_fields: [])
       if (Array.isArray(item)) {
-        return item.length > 0;
+        return true;
       }
 
       return true;

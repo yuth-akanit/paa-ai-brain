@@ -1,0 +1,24 @@
+{
+  "name": "regression_compact_address_capture",
+  "tags": ["regression", "address", "booking"],
+  "severity": "high",
+  "input": {
+    "message": "14/255 บางพลี สมุทรปราการ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "service_type": "cleaning",
+      "extracted_fields": {
+        "service_type": "cleaning"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "extracted_fields": {
+      "address": "14/255 บางพลี สมุทรปราการ",
+      "area": "บางพลี"
+    },
+    "handoff_reason": null
+  }
+}

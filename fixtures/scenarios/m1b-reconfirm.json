@@ -1,0 +1,41 @@
+{
+  "name": "m1b_reconfirm",
+  "tags": [
+    "regression",
+    "milestone-1b",
+    "scheduling"
+  ],
+  "severity": "high",
+  "input": {
+    "message": "โอเคครับ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "preferred_date": "อาทิตย์นี้",
+        "machine_count": 2
+      },
+      "metadata": {
+        "availability_flow_state": "proposed_alternative_slot",
+        "last_proposed_slot": {
+          "date": "วันเสาร์ (พรุ่งนี้)",
+          "time": "ช่วงบ่าย"
+        },
+        "policy_block_reason": "sunday_closed",
+        "pending_proposal": true
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "nextAction": "reconfirm_slot",
+    "extracted_fields": {
+      "preferred_date": "วันเสาร์ (พรุ่งนี้)",
+      "preferred_time": "ช่วงบ่าย"
+    },
+    "customer_reply_includes": [
+      "รับทราบ",
+      "ชื่อ"
+    ]
+  }
+}

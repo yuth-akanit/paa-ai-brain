@@ -1,0 +1,26 @@
+{
+  "name": "m2_quantity_correction",
+  "tags": ["regression", "milestone-2", "pricing"],
+  "severity": "high",
+  "input": {
+    "message": "จริงๆ ล้าง 3 เครื่องครับ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "service_type": "cleaning",
+        "machine_type": "wall",
+        "machine_count": 2,
+        "pricing_buckets": [{ "machine_type": "wall", "quantity": 2 }]
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ติดผนัง 3 เครื่อง", "ยอดรวม"],
+    "extracted_fields": {
+      "machine_count": 3,
+      "pricing_buckets": [{ "machine_type": "wall", "quantity": 3 }]
+    }
+  }
+}

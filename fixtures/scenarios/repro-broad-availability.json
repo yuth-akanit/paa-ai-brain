@@ -1,0 +1,20 @@
+{
+  "name": "runtime_broad_availability_query",
+  "tags": ["regression", "milestone-1", "crash-fix"],
+  "severity": "critical",
+  "input": {
+    "message": "ล้างแอร์ครับ ว่างวันไหนบ้าง",
+    "prior_case_state": {
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "phone": "0812345678"
+      }
+    }
+  },
+  "expected": {
+    "intent": "scheduling_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["วันอาทิตย์", "สะดวกวันไหน"],
+    "handoff_reason": null
+  }
+}

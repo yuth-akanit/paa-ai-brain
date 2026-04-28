@@ -1,0 +1,37 @@
+{
+  "name": "m1a_accept_alternative_low_signal",
+  "tags": [
+    "regression",
+    "milestone-1a",
+    "scheduling"
+  ],
+  "severity": "high",
+  "input": {
+    "message": "โอเคครับเอาตามนั้น",
+    "prior_case_state": {
+      "ai_intent": "scheduling_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning",
+        "preferred_date": "เสาร์นี้",
+        "preferred_time": "ช่วงบ่าย"
+      },
+      "metadata": {
+        "availability_flow_state": "proposed_alternative_slot"
+      }
+    }
+  },
+  "expected": {
+    "intent": "scheduling_request",
+    "should_handoff": false,
+    "customer_reply_includes": [
+      "รับทราบ",
+      "เบอร์"
+    ],
+    "customer_reply_not_includes": [
+      "ยินดีให้บริการ",
+      "สวัสดีครับ"
+    ],
+    "handoff_reason": null
+  }
+}

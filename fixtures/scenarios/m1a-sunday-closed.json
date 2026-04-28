@@ -1,0 +1,25 @@
+{
+  "name": "m1a_sunday_closed_offer_alternative",
+  "tags": ["regression", "milestone-1a", "scheduling"],
+  "severity": "high",
+  "input": {
+    "message": "วันอาทิตย์นี้ได้ไหมครับ",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "customer_name": "ต่าย",
+        "service_type": "cleaning"
+      },
+      "metadata": {
+        "availability_flow_state": "none"
+      }
+    }
+  },
+  "expected": {
+    "intent": "scheduling_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["วันอาทิตย์ทางเราหยุด", "วันจันทร์", "แทนได้ไหม"],
+    "customer_reply_not_includes": ["สวัสดีครับ", "ยินดีให้บริการ"],
+    "handoff_reason": null
+  }
+}

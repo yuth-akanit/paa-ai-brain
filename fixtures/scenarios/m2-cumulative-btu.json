@@ -1,0 +1,26 @@
+{
+  "name": "m2_cumulative_btu_capture",
+  "tags": ["regression", "milestone-2", "pricing"],
+  "severity": "high",
+  "input": {
+    "message": "ขนาด 12000 บีทียูครับ สองเครื่องเลย",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "service_type": "cleaning",
+        "machine_type": "wall",
+        "machine_count": 2,
+        "pricing_buckets": [{ "machine_type": "wall", "quantity": 2 }]
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ติดผนัง", "2 เครื่อง", "12000", "บาท"],
+    "extracted_fields": {
+      "btu": "12000",
+      "pricing_buckets": [{ "machine_type": "wall", "btu": "12000", "quantity": 2 }]
+    }
+  }
+}

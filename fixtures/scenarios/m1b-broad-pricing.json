@@ -1,0 +1,21 @@
+{
+  "name": "broad_pricing_query_no_handoff",
+  "tags": ["regression", "milestone-1b", "pricing"],
+  "severity": "normal",
+  "input": {
+    "message": "ราคาล้างแอร์เท่าไหร่ครับ",
+    "prior_case_state": {
+      "service_type": "cleaning",
+      "extracted_fields": {
+        "customer_name": "เจี๊ยบ",
+        "phone": "0899999999"
+      }
+    }
+  },
+  "expected": {
+    "intent": "faq_pricing",
+    "should_handoff": false,
+    "customer_reply_includes": ["BTU", "ประเภท"],
+    "handoff_reason": null
+  }
+}

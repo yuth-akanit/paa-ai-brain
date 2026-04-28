@@ -1,0 +1,24 @@
+{
+  "name": "address_capture_thai_multiline",
+  "tags": ["regression", "milestone-1b", "address"],
+  "severity": "critical",
+  "input": {
+    "message": "14/255 หมู่ 8 ตำบลบางโฉลง\nอำเภอบางพลี จ.สมุทรปราการ 10540",
+    "prior_case_state": {
+      "missing_fields": ["address"],
+      "extracted_fields": {
+        "service_type": "cleaning",
+        "customer_name": "เจี๊ยบ",
+        "phone": "0892223333",
+        "preferred_date": "วันจันทร์",
+        "preferred_time": "ช่วงเช้า"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "customer_reply_includes": ["ขอบคุณ", "กี่เครื่อง"],
+    "handoff_reason": null
+  }
+}

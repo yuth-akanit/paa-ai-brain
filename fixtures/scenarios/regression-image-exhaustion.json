@@ -1,0 +1,21 @@
+{
+  "name": "image_retry_exhausted",
+  "tags": ["regression", "orchestration", "media-flow"],
+  "severity": "high",
+  "input": {
+    "message": "vvv",
+    "prior_case_state": {
+      "ai_intent": "general_inquiry",
+      "metadata": {
+        "image_clarification_retry_count": 2,
+        "media_flow_state": "awaiting_service_label_for_image"
+      }
+    }
+  },
+  "expected": {
+    "intent": "general_inquiry",
+    "should_handoff": true,
+    "customer_reply_includes": ["เจ้าหน้าที่"],
+    "handoff_reason": "low_confidence_or_policy_limit"
+  }
+}

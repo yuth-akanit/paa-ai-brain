@@ -1,0 +1,25 @@
+{
+  "name": "repair_leak_pricing_in_repair_flow",
+  "tags": ["regression", "canonical", "repair", "pricing"],
+  "severity": "high",
+  "description": "ลูกค้าถามราคาซ่อมรั่วขณะอยู่ใน repair flow — ต้องตอบราคา ไม่ใช่ triage ต่อ",
+  "input": {
+    "message": "ค่าเติมน้ำยาเท่าไหร่ครับ",
+    "prior_case_state": {
+      "extracted_fields": {
+        "service_type": "repair",
+        "symptoms": "แอร์ไม่เย็น"
+      },
+      "meta": {
+        "active_flow": "repair",
+        "last_prompt_type": "repair_history_step"
+      }
+    }
+  },
+  "expected": {
+    "intent": "general_inquiry",
+    "should_handoff": false,
+    "customer_reply_includes": ["น้ำยา", "BTU"],
+    "customer_reply_not_includes": ["ล้างแอร์ล่าสุด", "อาการ", "ซ่อมแอร์ประเภทไหน"]
+  }
+}

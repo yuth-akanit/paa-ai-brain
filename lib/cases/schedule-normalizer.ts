@@ -13,6 +13,33 @@ const THAI_WEEKDAY_TO_INDEX: Record<string, number> = {
   "เสาร์": 6
 };
 
+const THAI_MONTH_TO_INDEX: Record<string, number> = {
+  "ม.ค.": 1,
+  "มกราคม": 1,
+  "ก.พ.": 2,
+  "กุมภาพันธ์": 2,
+  "มี.ค.": 3,
+  "มีนาคม": 3,
+  "เม.ย.": 4,
+  "เมษายน": 4,
+  "พ.ค.": 5,
+  "พฤษภาคม": 5,
+  "มิ.ย.": 6,
+  "มิถุนายน": 6,
+  "ก.ค.": 7,
+  "กรกฎาคม": 7,
+  "ส.ค.": 8,
+  "สิงหาคม": 8,
+  "ก.ย.": 9,
+  "กันยายน": 9,
+  "ต.ค.": 10,
+  "ตุลาคม": 10,
+  "พ.ย.": 11,
+  "พฤศจิกายน": 11,
+  "ธ.ค.": 12,
+  "ธันวาคม": 12
+};
+
 function getBangkokDateParts(reference = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: BANGKOK_TIMEZONE,
@@ -68,16 +95,33 @@ function resolveThaiDate(text: string, reference = new Date()) {
     return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
   }
 
+  const thaiAbsoluteMatch = normalized.match(/\b(?:วัน)?(?:จันทร์|อังคาร|พุธ|พฤหัส(?:บดี)?|ศุกร์|เสาร์|อาทิตย์)?\s*(\d{1,2})\s*(ม\.ค\.|มกราคม|ก\.พ\.|กุมภาพันธ์|มี\.ค\.|มีนาคม|เม\.ย\.|เมษายน|พ\.ค\.|พฤษภาคม|มิ\.ย\.|มิถุนายน|ก\.ค\.|กรกฎาคม|ส\.ค\.|สิงหาคม|ก\.ย\.|กันยายน|ต\.ค\.|ตุลาคม|พ\.ย\.|พฤศจิกายน|ธ\.ค\.|ธันวาคม)\s*(\d{2,4})?/);
+  if (thaiAbsoluteMatch) {
+    const day = Number(thaiAbsoluteMatch[1]);
+    const month = THAI_MONTH_TO_INDEX[thaiAbsoluteMatch[2]];
+    const bangkokNow = getBangkokDateParts(reference);
+    const rawYear = thaiAbsoluteMatch[3];
+    let year = rawYear ? Number(rawYear) : bangkokNow.year;
+    if (year < 100) year += 2000;
+    if (year > 2400) year -= 543;
+    if (month && day >= 1 && day <= 31) {
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+  }
+
   const thaiDateMatch = normalized.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
   if (thaiDateMatch) {
     const day = Number(thaiDateMatch[1]);
     const month = Number(thaiDateMatch[2]);
-    const rawYear = thaiDateMatch[3];
-    const bangkokNow = getBangkokDateParts(reference);
-    let year = rawYear ? Number(rawYear) : bangkokNow.year;
-    if (year < 100) year += 2000;
-    if (year > 2400) year -= 543;
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    // Ignore time-like values such as "14.00" and keep looking for weekday/text dates.
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const rawYear = thaiDateMatch[3];
+      const bangkokNow = getBangkokDateParts(reference);
+      let year = rawYear ? Number(rawYear) : bangkokNow.year;
+      if (year < 100) year += 2000;
+      if (year > 2400) year -= 543;
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
   }
 
   if (normalized.includes("วันนี้")) {
@@ -92,7 +136,7 @@ function resolveThaiDate(text: string, reference = new Date()) {
     return formatIsoDate(addDaysBangkok(reference, 2));
   }
 
-  const weekdayMatch = normalized.match(/วัน(จันทร์|อังคาร|พุธ|พฤหัส(?:บดี)?|ศุกร์|เสาร์|อาทิตย์)(นี้|หน้า)?/);
+  const weekdayMatch = normalized.match(/(?:วัน)?(จันทร์|อังคาร|พุธ|พฤหัส(?:บดี)?|ศุกร์|เสาร์|อาทิตย์)(นี้|หน้า)?/);
   if (weekdayMatch) {
     const bangkokNow = getBangkokDateParts(reference);
     const targetWeekday = THAI_WEEKDAY_TO_INDEX[weekdayMatch[1]];
@@ -111,15 +155,35 @@ function resolveThaiDate(text: string, reference = new Date()) {
   return null;
 }
 
+export function hasExplicitAbsoluteThaiDate(text: string) {
+  return /\b\d{1,2}\s*(ม\.ค\.|มกราคม|ก\.พ\.|กุมภาพันธ์|มี\.ค\.|มีนาคม|เม\.ย\.|เมษายน|พ\.ค\.|พฤษภาคม|มิ\.ย\.|มิถุนายน|ก\.ค\.|กรกฎาคม|ส\.ค\.|สิงหาคม|ก\.ย\.|กันยายน|ต\.ค\.|ตุลาคม|พ\.ย\.|พฤศจิกายน|ธ\.ค\.|ธันวาคม)\s*(\d{2,4})?/.test(text.trim());
+}
+
 function padTime(hours: number, minutes = 0) {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function isExactTimeValue(value: string) {
+  return /^\d{2}:\d{2}$/.test(value);
 }
 
 function resolveThaiTime(text: string) {
   const normalized = text.trim();
   if (!normalized) return null;
 
-  const hhmmMatch = normalized.match(/\b(\d{1,2})(?::|\.)?(\d{2})\b/);
+  // Period keywords PRIORITY - if the user says "ช่วงบ่าย", we use that even if other numbers exist
+  if (normalized.includes("ช่วงเช้า") || normalized === "เช้า" || normalized.includes("ตอนเช้า")) {
+    return "ช่วงเช้า";
+  }
+  if (normalized.includes("ช่วงบ่าย") || normalized === "บ่าย" || normalized.includes("ตอนบ่าย")) {
+    return "ช่วงบ่าย";
+  }
+  if (normalized.includes("ช่วงเย็น") || normalized === "เย็น" || normalized.includes("ตอนเย็น")) {
+    return "ช่วงเย็น";
+  }
+
+  // Exact time HH:MM or HH.MM - MUST have separator to avoid house number collisions (e.g. 14/255)
+  const hhmmMatch = normalized.match(/\b(\d{1,2})[:.](\d{2})\b/);
   if (hhmmMatch) {
     return padTime(Number(hhmmMatch[1]), Number(hhmmMatch[2]));
   }
@@ -134,38 +198,36 @@ function resolveThaiTime(text: string) {
     return padTime(Number(hourMatch[1]), 0);
   }
 
-  if (normalized.includes("ช่วงเช้า") || normalized === "เช้า" || normalized.includes("ตอนเช้า")) {
-    return "09:00";
-  }
-
-  if (normalized.includes("ช่วงบ่าย") || normalized === "บ่าย" || normalized.includes("ตอนบ่าย")) {
-    return "13:00";
-  }
-
-  if (normalized.includes("ช่วงเย็น") || normalized === "เย็น" || normalized.includes("ตอนเย็น")) {
-    return "17:00";
-  }
-
   return null;
 }
 
 export function normalizeScheduleFields(fields: ExtractedCaseFields, messageText: string, reference = new Date()): ExtractedCaseFields {
   const nextFields: ExtractedCaseFields = { ...fields };
   const dateSource = [fields.preferred_date, messageText].filter(Boolean).join(" ");
-  const timeSource = [fields.preferred_time, fields.preferred_date, messageText].filter(Boolean).join(" ");
+  // Use messageText only — stale preferred_time from DB state must not re-confirm itself across turns
+  const timeSource = messageText;
 
   const normalizedDate = resolveThaiDate(dateSource, reference);
   const normalizedTime = resolveThaiTime(timeSource);
 
   if (normalizedDate) {
-    nextFields.preferred_date = normalizedDate;
+    nextFields.preferred_date_iso = normalizedDate;
   }
 
   if (normalizedTime) {
     nextFields.preferred_time = normalizedTime;
-  } else if (normalizedDate && !nextFields.preferred_time) {
-    nextFields.preferred_time = "14:00";
+    if (isExactTimeValue(normalizedTime)) {
+      nextFields.preferred_time_exact = normalizedTime;
+    }
   }
 
   return nextFields;
+}
+
+export function hasNormalizedPreferredDate(fields: ExtractedCaseFields) {
+  return Boolean(fields.preferred_date_iso || resolveThaiDate(fields.preferred_date ?? ""));
+}
+
+export function hasExactPreferredTime(fields: ExtractedCaseFields) {
+  return Boolean(fields.preferred_time_exact || (fields.preferred_time && isExactTimeValue(fields.preferred_time)));
 }

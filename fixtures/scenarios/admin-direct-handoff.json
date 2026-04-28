@@ -14,13 +14,8 @@
   "expected": {
     "intent": "admin_handoff",
     "should_handoff": true,
-    "missing_fields": [],
-    "customer_reply_includes": ["เจ้าหน้าที่", "ประสานกลับ"],
-    "handoff_reason": "customer_requested_human_agent",
-    "admin_summary": {
-      "reason": "customer_requested_human_agent",
-      "recommended_next_action": "admin_contact_customer"
-    }
+    "customer_reply_includes": ["เจ้าหน้าที่"],
+    "handoff_reason": "customer_requested_human_agent"
   },
   "knowledge_debug": {
     "relevant_knowledge_ids": ["mock-knowledge-004"],

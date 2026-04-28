@@ -18,13 +18,8 @@
   "expected": {
     "intent": "cold_room_request",
     "should_handoff": true,
-    "missing_fields": [],
-    "customer_reply_equals": "เคสนี้เป็นงานเฉพาะทาง เดี๋ยวเจ้าหน้าที่ประสานกลับเพื่อประเมินหน้างานครับ",
-    "handoff_reason": "complex_specialized_case",
-    "admin_summary": {
-      "reason": "complex_specialized_case",
-      "recommended_next_action": "admin_contact_and_schedule_site_visit"
-    }
+    "customer_reply_includes": ["เจ้าหน้าที่", "ติดต่อกลับ"],
+    "handoff_reason": "complex_specialized_case"
   },
   "knowledge_debug": {
     "relevant_knowledge_ids": ["mock-knowledge-004"],

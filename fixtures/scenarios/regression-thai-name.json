@@ -1,0 +1,23 @@
+{
+  "name": "Orchestration Regression - Thai Short Name",
+  "tags": ["regression", "orchestration"],
+  "severity": "critical",
+  "input": {
+    "message": "ชื่อต่าย",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "missing_fields": ["customer_name", "phone", "address"],
+      "extracted_fields": { "service_type": "cleaning" }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "missing_fields": ["phone", "address", "preferred_date", "preferred_time", "machine_count"],
+    "extracted_fields": {
+      "customer_name": "ต่าย"
+    },
+    "customer_reply_includes": ["เบอร์"],
+    "handoff_reason": null
+  }
+}

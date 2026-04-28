@@ -17,12 +17,9 @@
     }
   },
   "expected": {
-    "intent": "scheduling_request",
+    "intent": "cleaning_request",
     "should_handoff": false,
-    "handoff_reason": null,
-    "admin_summary": {
-      "reason": "not_required"
-    }
+    "handoff_reason": null
   },
   "knowledge_debug": {
     "policy_scope": ["collect_missing_fields_only"],

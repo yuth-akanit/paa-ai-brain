@@ -29,7 +29,8 @@ Supported intents:
 - scheduling_request: User asking about availability, appointment, or when the team is free.
 - greeting: Simple greetings like hello, hi, sawasdee.
 - general_inquiry: Other topics or vague messages.
-- closing: Customer saying thank you, acknowledgement, or ok.
+- closing: Customer saying thank you, or explicit farewell.
+- low_signal_ack: Short affirmative answers like "ได้ครับ", "ได้ค่ะ", "โอเค", "ครับ", "ค่ะ", "ok". Use this when the user is just saying "yes" to a bot prompt.
 
 Examples:
 - "จะจองล้างแอร์ครับ" -> cleaning_request (0.95)
@@ -67,11 +68,12 @@ Schema:
 10. urgency: [high, medium, low]
 
 CRITICAL RULES:
-- Return ONLY fields that are explicitly mentioned in the current message.
-- Do NOT include fields that are not in the current message — omit them entirely.
+- Return ONLY fields that are explicitly mentioned in the CURRENT Message.
+- Do NOT hallucinate, assume, or guess values based on context. If it's not there, OMIT it.
+- NEVER include fields that are not in the current message — omit them entirely.
 - NEVER set any field to null, 0, or empty string. Omit it instead.
 - Do NOT copy or repeat values from Current Fields into your response.
-- If a district name like "บางพลี" appears, extract it into "area".
+- IGNORE business contact info (Sukhumvit 101, 084-282-4465) if found in Knowledge; NEVER extract these as customer details.
 
 Current Fields (for reference only — do NOT repeat these in your response):
 ${JSON.stringify(currentFields)}
@@ -115,6 +117,7 @@ export function buildResponsePrompt(input: PromptInput, intent: IntentName) {
 - ถ้าลูกค้าให้ข้อมูลมา รับทราบสั้นๆ แล้วถามต่อ
 - ห้ามถามซ้ำสิ่งที่รู้แล้ว
 - ราคาต้องมาจาก Price Facts เท่านั้น ห้ามแต่ง
+- ห้ามตอบว่า "ได้คิวแล้ว" หรือ "จองสำเร็จแล้ว" เป็นอันขาด ให้ใช้คำว่า "ส่งข้อมูลให้แอดมินเพื่อลงคิวและคอนเฟิร์มกลับ" เท่านั้น เพราะต้องรอแอดมินตรวจสอบคิวจริง
 - วันอาทิตย์หยุด เปิด จันทร์-เสาร์ 09:00-18:00
 - closing intent → customer_reply เป็นค่าว่าง, cold_room/admin_handoff → should_handoff=true${nextFieldHint}
 
@@ -128,4 +131,25 @@ ${relevantKB.length > 0 ? `ข้อมูลอ้างอิง:\n${JSON.stri
 ${relevantPrices.length > 0 ? `ราคา:\n${JSON.stringify(relevantPrices, null, 2)}` : ""}
 
 ตอบ JSON: {"customer_reply":"...","intent":"${intent}","confidence":0.9,"should_handoff":false,"missing_fields":[],"extracted_fields":{}}`;
+}
+export function buildVisionPrompt(message: string) {
+  return `
+Analyze HVAC-related customer images. Extract visible clues only. Reply in Thai.
+Do not invent unavailable details. Prioritize clues related to AC cleaning, repair symptoms, or installation context.
+
+Schema (JSON only):
+{
+  "intent": "cleaning_request" | "repair_request" | "installation_request" | "general_inquiry",
+  "confidence": 0.85,
+  "needsFallback": boolean,
+  "visibleSignals": ["list of things seen, e.g. wall unit, ice, dripping, dusty filter"],
+  "capturedFields": {
+    "machine_type": "wall" | "cassette" | "ceiling_floor" | "package" | "cold_room",
+    "machine_count": integer
+  },
+  "replyDraftThai": "สรุปสิ่งที่มองเห็นจากรูปเบื้องต้น..."
+}
+
+Message/Context: """${message}"""
+`;
 }

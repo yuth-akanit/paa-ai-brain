@@ -1,0 +1,26 @@
+{
+  "name": "regression_multiline_schedule_capture",
+  "tags": ["regression", "multiline", "schedule"],
+  "severity": "high",
+  "input": {
+    "message": "เสาร์\n14.00",
+    "prior_case_state": {
+      "ai_intent": "repair_request",
+      "service_type": "repair",
+      "extracted_fields": {
+        "service_type": "repair"
+      }
+    }
+  },
+  "expected": {
+    "intent": "repair_request",
+    "should_handoff": false,
+    "extracted_fields": {
+      "preferred_date": "เสาร์",
+      "preferred_date_iso": "2026-04-25",
+      "preferred_time": "14:00",
+      "preferred_time_exact": "14:00"
+    },
+    "handoff_reason": null
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "pricing_fragments_acknowledged",
+  "tags": ["regression", "orchestration", "pricing"],
+  "severity": "critical",
+  "input": {
+    "message": "ติดผนัง 12000 3 เครื่อง",
+    "prior_case_state": {
+      "ai_intent": "faq_pricing",
+      "extracted_fields": {
+        "service_type": "cleaning"
+      }
+    }
+  },
+  "expected": {
+    "intent": "faq_pricing",
+    "should_handoff": false,
+    "extracted_fields": {
+      "machine_type": "wall",
+      "machine_count": 3
+    },
+    "customer_reply_includes": ["ราคาล้าง", "เริ่มต้น"],
+    "handoff_reason": null
+  }
+}

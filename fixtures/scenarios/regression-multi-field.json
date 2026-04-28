@@ -1,0 +1,24 @@
+{
+  "name": "availability_turn_with_state_advance",
+  "tags": ["regression", "orchestration", "multi-field"],
+  "severity": "critical",
+  "input": {
+    "message": "วันเสาร์ช่วงเช้า ล้าง 4 เครื่องครับ",
+    "prior_case_state": {
+      "ai_intent": "greeting",
+      "extracted_fields": {}
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "extracted_fields": {
+      "service_type": "cleaning",
+      "machine_count": 4,
+      "preferred_date": "วันเสาร์ช่วงเช้า",
+      "preferred_time": "ช่วงเช้า"
+    },
+    "customer_reply_includes": ["เลือก", "เต็ม"],
+    "handoff_reason": null
+  }
+}

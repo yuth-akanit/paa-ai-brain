@@ -21,6 +21,7 @@ export type BookingWebhookPayload = {
 export const BOOKING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
   "customer_name",
   "phone",
+  "address",
   "preferred_date",
   "preferred_time",
   "service_type",
@@ -29,17 +30,20 @@ export const BOOKING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
 
 export function getMissingBookingFields(fields: ExtractedCaseFields) {
   const missing = BOOKING_REQUIRED_FIELDS.filter((field) => {
+    if (field === "address") {
+        return !(fields.address?.trim().length || fields.area?.trim().length);
+    }
+    if (field === "preferred_date") {
+      return !(fields.preferred_date_iso?.trim().length || fields.preferred_date?.trim().length);
+    }
+    if (field === "preferred_time") {
+      return !(fields.preferred_time_exact?.trim().length);
+    }
     const value = fields[field];
     if (value === null || value === undefined) return true;
     if (typeof value === "string") return value.trim().length === 0;
     return false;
   });
-
-  // address OR area must be present
-  const hasLocation =
-    (fields.address && fields.address.trim().length > 0) ||
-    (fields.area && fields.area.trim().length > 0);
-  if (!hasLocation) missing.push("address");
 
   return missing;
 }
@@ -54,6 +58,12 @@ export const SCHEDULING_REQUIRED_FIELDS: Array<keyof ExtractedCaseFields> = [
 
 export function getMissingSchedulingFields(fields: ExtractedCaseFields) {
   const missing = SCHEDULING_REQUIRED_FIELDS.filter((field) => {
+    if (field === "preferred_date") {
+      return !(fields.preferred_date_iso?.trim().length || fields.preferred_date?.trim().length);
+    }
+    if (field === "preferred_time") {
+      return !(fields.preferred_time_exact?.trim().length);
+    }
     const value = fields[field];
     if (value === null || value === undefined) return true;
     if (typeof value === "string") return value.trim().length === 0;
@@ -74,7 +84,9 @@ export function isBookingReady(fields: ExtractedCaseFields): fields is Extracted
   phone: string;
   address: string;
   preferred_date: string;
+  preferred_date_iso: string;
   preferred_time: string;
+  preferred_time_exact: string;
   service_type: ServiceType;
   machine_count: number;
 } {

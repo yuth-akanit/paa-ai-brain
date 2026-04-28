@@ -1,17 +1,37 @@
 import { z } from "zod";
 
+const nonEmptyString = z.string().trim().min(1);
+
 export const extractedFieldsSchema = z.object({
   customer_name: z.string().optional(),
   phone: z.string().max(30).optional(),
   area: z.string().optional(),
   address: z.string().optional(),
-  service_type: z.enum(["cleaning", "repair", "inspection", "relocation", "cold_room", "other"]).optional(),
+  site_context: z.string().optional(),
+  service_type: z.enum(["cleaning", "repair", "inspection", "relocation", "installation", "cold_room", "other"]).optional(),
   machine_count: z.number().int().positive().max(200).optional(),
-  machine_type: z.enum(["wall", "cassette", "ceiling_floor", "package", "cold_room"]).optional(),
+  machine_type: z.enum(["wall", "cassette", "ceiling_floor", "package", "duct", "cold_room"]).optional(),
   symptoms: z.string().optional(),
+  repair_subtype: z.enum(["noise", "not_cold", "leak", "smell", "unknown"]).optional(),
   preferred_date: z.string().optional(),
+  preferred_date_iso: z.string().optional(),
   preferred_time: z.string().optional(),
-  urgency: z.enum(["low", "medium", "high"]).optional()
+  preferred_time_exact: z.string().optional(),
+  btu: z.string().optional(),
+  urgency: z.enum(["low", "medium", "high"]).optional(),
+  room_size: z.string().optional(),
+  usage_context: z.string().optional(),
+  last_cleaning_recency: z.string().optional(),
+  building_type: z.string().optional(),
+  parking_context: z.string().optional(),
+  walking_distance: z.string().optional(),
+  product_type: z.enum(["wall", "cassette", "portable", "commercial", "parts", "unknown"]).optional(),
+  need_installation: z.boolean().optional(),
+  pricing_buckets: z.array(z.object({
+    machine_type: z.enum(["wall", "cassette", "ceiling_floor", "package", "duct", "unknown"]),
+    btu: z.union([z.string(), z.number()]).optional().nullable(),
+    quantity: z.number().int().positive().default(1)
+  })).optional()
 });
 
 export const aiDecisionSchema = z.object({
@@ -24,12 +44,19 @@ export const aiDecisionSchema = z.object({
     "inspection_request",
     "cleaning_request",
     "relocation_request",
+    "installation_request",
     "cold_room_request",
     "admin_handoff",
     "scheduling_request",
     "greeting",
     "general_inquiry",
-    "closing"
+    "product_availability_query",
+    "sales_inquiry",
+    "relocation_pricing_query",
+    "availability_query",
+    "commercial_pricing_query",
+    "closing",
+    "low_signal_ack"
   ]),
   confidence: z.number().min(0).max(1),
   should_handoff: z.boolean(),
@@ -41,13 +68,24 @@ export const aiDecisionSchema = z.object({
         "area",
         "address",
         "service_type",
+        "machine_type",
         "machine_count",
+        "site_context",
         "symptoms",
+        "repair_subtype",
         "preferred_date",
         "preferred_time",
+        "btu",
         "urgency",
+        "room_size",
+        "product_type",
+        "need_installation",
         "policy_scope",
-        "photo_request"
+        "photo_request",
+        "last_cleaning_recency",
+        "building_type",
+        "parking_context",
+        "walking_distance"
       ])
     )
     .default([]),
@@ -97,24 +135,35 @@ export const adminKnowledgeSchema = z.object({
   status: z.enum(["draft", "published"]).default("published")
 });
 
-export const aiRespondRequestSchema = z.object({
-  channel: z.literal("line"),
-  channelUserId: z.string().min(1),
-  channelPlatformId: z.string().optional().nullable(),
-  accountKey: z.string().optional().nullable(),
-  threadId: z.string().uuid().optional().nullable(),
-  customerMessage: z.string().optional().nullable(),
-  sourceEvent: z.object({
-    replyToken: z.string().min(1).optional(),
-    messageId: z.string().min(1),
-    timestamp: z.number(),
-    messageType: z.string().optional()
-  }),
-  runtime: z.object({
-    requestId: z.string(),
-    receivedAt: z.string().datetime(),
-    mode: z.string()
+const aiRespondSourceEventSchema = z
+  .object({
+    replyToken: z.union([nonEmptyString, z.null()]).optional(),
+    messageId: z.union([nonEmptyString, z.null()]).optional(),
+    messageType: nonEmptyString.optional().default("text"),
+    timestamp: z.union([z.number(), z.string(), z.null()]).optional(),
+    imageBase64: z.union([z.string(), z.null()]).optional(),
+    mediaUrl: z.union([z.string(), z.null()]).optional()
   })
+  .passthrough();
+
+const aiRespondRuntimeSchema = z
+  .object({
+    requestId: z.string().optional(),
+    receivedAt: z.string().optional(),
+    mode: z.string().optional(),
+    runtimeMode: z.enum(["shadow", "live"]).optional()
+  })
+  .passthrough();
+
+export const aiRespondRequestSchema = z.object({
+  channel: z.enum(["line", "facebook"]),
+  channelUserId: nonEmptyString,
+  channelPlatformId: nonEmptyString,
+  accountKey: nonEmptyString,
+  threadId: z.union([z.string(), z.null()]).optional(),
+  customerMessage: nonEmptyString,
+  sourceEvent: aiRespondSourceEventSchema.optional().default({ messageType: "text" }),
+  runtime: aiRespondRuntimeSchema.optional()
 });
 
 export const aiRespondResponseSchema = z.object({

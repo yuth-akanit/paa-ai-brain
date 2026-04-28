@@ -1,0 +1,18 @@
+{
+  "name": "address_capture_leading_dot",
+  "tags": ["regression", "milestone-1b", "address"],
+  "severity": "normal",
+  "input": {
+    "message": ".14/255 หมู่ 8 ตำบลบางโฉลง อำเภอบางพลี จ.สมุทรปราการ 10540",
+    "prior_case_state": {
+      "missing_fields": ["address"],
+      "extracted_fields": {
+        "service_type": "cleaning"
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "m1b_sunday_negotiation_full",
+  "turns": [
+    {
+      "user": "จองล้างแอร์วันอาทิตย์นี้หน่อยครับ",
+      "expect": {
+        "nextAction": "propose_alternative_slot",
+        "policyBlockReason": "sunday_closed",
+        "pendingProposal": true
+      }
+    },
+    {
+      "user": "โอเคครับ",
+      "expect": {
+        "nextAction": "reconfirm_slot",
+        "stateAdvanced": true,
+        "pendingProposal": false,
+        "customer_reply_includes": ["รับทราบครับ", "สรุปเป็น"]
+      }
+    }
+  ]
+}

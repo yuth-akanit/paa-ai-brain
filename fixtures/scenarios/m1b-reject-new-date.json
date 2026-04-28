@@ -1,0 +1,39 @@
+{
+  "name": "m1b_reject_new_date",
+  "tags": [
+    "regression",
+    "milestone-1b",
+    "scheduling"
+  ],
+  "severity": "high",
+  "input": {
+    "message": "ไม่ว่างครับ ขอเป็นวันศุกร์แทน",
+    "prior_case_state": {
+      "ai_intent": "cleaning_request",
+      "extracted_fields": {
+        "preferred_date": "เสาร์เช้า",
+        "machine_count": 2
+      },
+      "metadata": {
+        "availability_flow_state": "proposed_alternative_slot",
+        "last_proposed_slot": {
+          "date": "วันเสาร์ช่วงบ่าย",
+          "time": "14:00"
+        },
+        "pending_proposal": true
+      }
+    }
+  },
+  "expected": {
+    "intent": "cleaning_request",
+    "should_handoff": false,
+    "nextAction": "reconfirm_slot",
+    "extracted_fields": {
+      "preferred_date": "วันศุกร์"
+    },
+    "customer_reply_includes": [
+      "รับทราบ",
+      "ชื่อ"
+    ]
+  }
+}
