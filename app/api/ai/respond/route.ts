@@ -3,6 +3,7 @@ import { aiRespondRequestSchema } from "../../../../lib/schemas";
 import { processCustomerMessage } from "../../../../lib/cases/case-manager";
 import { createConversationMessage, getServiceCase, updateCaseState, updateThreadState } from "../../../../lib/db/queries";
 import type { ConversationMetadata } from "../../../../lib/types";
+import { buildPublicAiRespondPayload } from "../../../../lib/ai/respond-contract";
 
 export const dynamic = "force-dynamic";
 
@@ -105,26 +106,13 @@ export async function POST(request: Request) {
 
     console.log(`[AI-RESPOND] Successfully completed request ${requestId}`);
 
-    return NextResponse.json({
-      ok: true,
-      intent: decision.intent,
-      confidence: 1.0,
-      should_handoff: decision.shouldHandoff,
-      missing_fields: decision.nextMissingField ? [decision.nextMissingField] : [],
-      extracted_fields: decision.mergedFields,
-      customer_reply: decision.customerReply,
-      recommended_action: decision.nextAction === "skip_reply" ? "skip_reply" : "reply_customer",
-      admin_summary: decision.summary,
-      decision_meta: { 
-        reason: decision.nextAction,
-        retry_count: decision.retryCount,
-        state_advanced: decision.stateAdvanced,
-        captured_fields: decision.capturedFields,
-        metadata: decision.nextMetadata,
-        decision_source: decision.decisionSource,
-        error_code: decision.errorCode
-      }
-    });
+    return NextResponse.json(buildPublicAiRespondPayload({
+      channel: inbound.channel,
+      customerMessage,
+      messageType: sourceEvent.messageType,
+      runtimeMode: inbound.runtime?.runtimeMode,
+      decision
+    }));
 
   } catch (error) {
     console.error(`[AI-RESPOND] [${requestId}] critical_failure`, error);

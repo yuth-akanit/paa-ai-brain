@@ -1,0 +1,75 @@
+[INTENT] Address/Phone detected (isAddr=true). Ongoing: cleaning_request
+[INTENT] Address/Phone detected (isAddr=true). Ongoing: cleaning_request
+
+=== ACTIVE CONTRACTS PERFORMANCE ===
+❌ FAIL [m1a] inspection_request_basic
+    Actual Intent: inspection_request
+    Actual Reply: รับทราบที่อยู่ครับ ขอบคุณครับ ขอเบอร์ติดต่อด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุป
+❌ FAIL [m1a] relocation_request_basic
+    Actual Intent: relocation_request
+    Actual Reply: รับทราบที่อยู่ครับ ขอบคุณครับ ขอทราบชื่อลูกค้าด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุป
+❌ FAIL [m1a] repair_request_basic
+    Actual Intent: repair_request
+    Actual Reply: รับทราบที่อยู่ครับ ขอบคุณครับ ขอเบอร์ติดต่อด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุป
+✅ PASS [m0] cold_room_request_handoff
+✅ PASS [m0] admin_direct_handoff_basic
+✅ PASS [m0] booking_intent_cleaning
+✅ PASS [m0] greeting_no_price_leak
+✅ PASS [m0] service_area_maptaphut
+✅ PASS [m0] service_area_bangplee
+✅ PASS [m0] closing_empty_reply
+✅ PASS [m0] context_no_repeat_customer_name
+✅ PASS [m0] Orchestration Regression - Thai Short Name
+✅ PASS [m0] Orchestration Regression - Low Signal Noise
+✅ PASS [m0] availability_turn_with_state_advance
+✅ PASS [m0] low_signal_continue_flow
+✅ PASS [m2] pricing_fragments_acknowledged
+✅ PASS [m0] image_retry_exhausted
+✅ PASS [m1a] availability_conflict_detection
+❌ FAIL [m1a] availability_proposed_slot_ack
+    Actual Intent: scheduling_request
+    Actual Reply: รับทราบครับ! ขอเบอร์ติดต่อด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุป
+✅ PASS [m1a] m1a_slot_unavailable_offer_alternative
+❌ FAIL [m1a] m1a_accept_alternative_low_signal
+    Actual Intent: scheduling_request
+    Actual Reply: รับทราบครับ! ขอเบอร์ติดต่อด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุป
+❌ FAIL [m1a] m1a_reject_alternative_request_new
+    Actual Intent: cleaning_request
+    Actual Reply: รับทราบครับ! ขอเบอร์ติดต่อด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุปเป็น
+    └─ ❌ customer_reply missing fragment=วันจันทร์
+    └─ ❌ customer_reply missing fragment=เช้า
+✅ PASS [m2] m2_mixed_unit_pricing_buckets
+✅ PASS [m2] m2_quantity_correction
+✅ PASS [m2] m2_cumulative_btu_capture
+✅ PASS [m2] m2_mixed_known_unknown
+✅ PASS [m1b] m1b_sunday_closed
+✅ PASS [m1b] m1b_too_soon
+❌ FAIL [m1b] m1b_reconfirm
+    Actual Intent: cleaning_request
+    Actual Reply: รับทราบครับ แอร์ 2 เครื่องนะครับ ขอทราบชื่อลูกค้าด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=นัดหมาย
+    └─ ❌ customer_reply missing fragment=วันเสาร์
+❌ FAIL [m1b] m1b_reject_new_date
+    Actual Intent: cleaning_request
+    Actual Reply: รับทราบครับ แอร์ 2 เครื่องนะครับ ขอทราบชื่อลูกค้าด้วยได้ไหมครับ?
+    └─ ❌ customer_reply missing fragment=สรุปเป็น
+✅ PASS [m1] runtime_broad_availability_query
+✅ PASS [m1b] broad_pricing_query_no_handoff
+✅ PASS [m0] greeting_short
+✅ PASS [m1b] address_capture_thai_multiline
+✅ PASS [m1b] address_capture_leading_dot
+
+=== LEGACY (TO MIGRATE) ===
+⚠️  FAIL faq_price_basic
+⚠️  FAIL faq_service_area_basic
+⚠️  FAIL low_confidence_custom_question
+✅ PASS Orchestration Regression - Pricing Fragment
+
+Summary: 27/35 active passed
+❌ FAILED: 8 active scenarios failed.

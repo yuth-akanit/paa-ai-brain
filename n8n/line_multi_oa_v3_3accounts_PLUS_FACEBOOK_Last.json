@@ -1,0 +1,3396 @@
+{
+  "name": "line_multi_oa_v3_3accounts_PLUS_FACEBOOK_LIVE_PATCHED_SUPABASE_LOOKUP_FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://paavpbzosxhggtfqvwcy.supabase.co/rest/v1/social_pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "provider",
+              "value": "eq.facebook"
+            },
+            {
+              "name": "external_id",
+              "value": "=eq.{{ $json.fb_page_id }}"
+            },
+            {
+              "name": "select",
+              "value": "name,provider,external_id,access_token"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "4b0267f4-b167-424c-9cd0-eec0d681968f",
+      "name": "Supabase - Get Facebook Page Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1920,
+        10016
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "JL683F3y5WQn5dTM",
+          "name": "SUPABASE_URL_PA"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Normalize Facebook Events1').item.json;\nconst input = $input.first().json;\nconst cfg = Array.isArray(input) ? input[0] : input;\n\nif (!cfg || !cfg.external_id || !cfg.access_token) {\n  return [{\n    json: {\n      ...original,\n      ok: false,\n      error: !cfg || !cfg.external_id ? 'facebook_page_config_not_found' : 'facebook_page_access_token_missing',\n      account_key: `FB:${original.fb_page_id || 'unknown_page'}`,\n      page_access_token: '',\n      ADMIN_TO: '',\n      LIFF_BOOK_URL: '',\n      INBOX_BASE_URL: 'https://admin.paaair.online/webhook/line/chat'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...original,\n    ok: true,\n    account_key: cfg.name || `FB:${original.fb_page_id}`,\n    platform: cfg.provider === 'messenger' ? 'facebook' : (cfg.provider || 'facebook'),\n    channel_platform_id: cfg.external_id || original.fb_page_id,\n    fb_page_id: cfg.external_id || original.fb_page_id,\n    page_access_token: cfg.access_token || '',\n    ADMIN_TO: original.ADMIN_TO || '',\n    LIFF_BOOK_URL: original.LIFF_BOOK_URL || '',\n    INBOX_BASE_URL: original.INBOX_BASE_URL || 'https://admin.paaair.online/webhook/line/chat'\n  }\n}];"
+      },
+      "id": "6ccffca5-c45a-4e1f-bcef-281f99e32b74",
+      "name": "Attach Facebook Page Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        10016
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb-config-ok",
+              "leftValue": "={{ $json.ok === true && !!String($json.page_access_token || '').trim() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0144d3ee-78a7-4d5a-add5-033abd2c558d",
+      "name": "Facebook Config OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        10016
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "event_type",
+              "value": "={{ $json.event_type || 'message' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "cmd",
+              "value": "={{ (() => { \n    const raw = String($json.cmd || '').trim(); \n    if (raw) {\n      if (/^MENU:ASK_AI$/i.test(raw)) return null; \n      if (/^(MENU|ADMIN):/i.test(raw)) return raw; \n      return null; \n    }\n    if (String($json.platform || '').toLowerCase() === 'facebook') return null;\n    const text = String($json.text || '').trim().toLowerCase();\n    const asksPrice = /(ราคา|สอบถามราคา|เท่าไหร่|กี่บาท|ค่าล้าง|ค่าบริการ|เริ่มต้น)/.test(text);\n    const isCleaning = /(ล้างแอร์|ล้างเครื่อง|ล้าง)/.test(text);\n    const isNonStandard = /(ซ่อม|ติดตั้ง|ย้าย|รื้อ|เติมน้ำยา|ห้องเย็น|แอร์ดัก|แอร์ต่อท่อ|duct|โรงงาน|พาณิชย์|4\\s*ทิศทาง|cassette|แขวน|ตั้งพื้น)/.test(text);\n    if (asksPrice && isCleaning && !isNonStandard) return 'MENU:PRICE_CLEAN';\n    return null; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "text",
+              "value": "={{ (() => {\n  const text = String($json.text || '').trim();\n  const raw = String($json.cmd || '').trim().toUpperCase();\n  if (text) return text;\n  if (raw === 'MENU:ASK_AI') return 'สวัสดีครับ ยินดีให้บริการ PAA Air Service ครับ มีอะไรให้ผมช่วยไหมครับ? (ล้างแอร์ / ซ่อม / ย้ายแอร์ / สอบถามราคา)';\n  return '';\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "runtime-mode-toggle",
+              "name": "RUNTIME_MODE",
+              "value": "={{ (() => {\n  const platform = String($json.platform || '').toLowerCase();\n  const ch = String($json.channel_platform_id || '');\n  // Facebook: เปิดบอทตอบลูกค้าจริง\n  if (platform === 'facebook') return 'live';\n\n  // LINE OA3 / PA Cool เดิมตั้งเป็น active ซึ่งทำให้ brain schema fail\n  // ใช้ live แทน เพราะ backend รับ runtimeMode: shadow | live\n  if (ch === '2008387791') return 'live';\n\n  // OA1/OA2 ยังเป็น shadow เพื่อไม่ให้ตอบลูกค้าจริงโดยไม่ตั้งใจ\n  return 'shadow';\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c7b6b315-fc87-494a-b5ba-ba11428b64e2",
+      "name": "Normalize cmd",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        10064
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-shadow-review-v2",
+              "leftValue": "={{ String($json.RUNTIME_MODE || $json.runtime_mode || 'shadow').toLowerCase() === 'shadow' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6b5f717b-ea06-4fcc-82e5-49c9f5e54dad",
+      "name": "Is Shadow Review? v1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3552,
+        10128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb-verify-mode",
+              "leftValue": "={{ $json.query?.[\"hub.mode\"] || \"\" }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "354120d0-d7ed-4b17-a72f-b88ac01b9824",
+      "name": "Facebook Verify?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        9840
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query?.['hub.challenge'] || '' }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3e65d0b0-d521-48c9-a9eb-a45e1e4af488",
+      "name": "Facebook Return Challenge1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        9744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Facebook Messenger webhook -> unified runtime item(s)\n// Token/page config is NOT hardcoded here.\n// Next step must lookup public.social_pages by provider='facebook' and external_id=fb_page_id.\n\nconst req = $json;\nconst body = req.body ?? req;\nconst results = [];\n\nfor (const entry of (Array.isArray(body.entry) ? body.entry : [])) {\n  const pageId = String(entry.id || \"\").trim();\n\n  for (const ev of (Array.isArray(entry.messaging) ? entry.messaging : [])) {\n    if (!ev.message) continue;\n    if (ev.message.is_echo) continue;\n\n    const senderId = String(ev.sender?.id || \"\").trim();\n    const mid = String(ev.message?.mid || \"\").trim();\n    const text = String(ev.message?.text || \"\").trim();\n\n    let messageType = \"text\";\n    let mediaUrl = null;\n\n    if (Array.isArray(ev.message.attachments) && ev.message.attachments.length > 0) {\n      const att = ev.message.attachments[0];\n      messageType = String(att.type || \"attachment\").toLowerCase();\n      mediaUrl = att.payload?.url || null;\n    }\n\n    results.push({\n      json: {\n        platform: \"facebook\",\n        fb_page_id: pageId,\n        channel_platform_id: pageId,\n\n        fb_recipient_id: senderId,\n        platform_user_id: senderId,\n        line_user_id: senderId,\n        reply_token: \"\",\n\n        event_type: \"message\",\n        message_type: messageType,\n        text: text || (mediaUrl ? \"[สื่อ/รูปภาพ]\" : \"\"),\n        cmd: null,\n        ts: ev.timestamp || Date.now(),\n\n        account_key: `FB:${pageId || \"unknown_page\"}`,\n        page_access_token: \"\",\n        ADMIN_TO: \"\",\n        LIFF_BOOK_URL: \"\",\n        INBOX_BASE_URL: \"https://admin.paaair.online/webhook/line/chat\",\n\n        platform_message_id: mid || null,\n        raw_event: {\n          platform: \"facebook\",\n          page_id: pageId,\n          sender: ev.sender,\n          recipient: ev.recipient,\n          timestamp: ev.timestamp,\n          message: ev.message,\n          media_url: mediaUrl\n        }\n      }\n    });\n  }\n}\n\nif (!results.length) {\n  return [{\n    json: {\n      platform: \"facebook\",\n      event_type: \"skip\",\n      message_type: \"none\",\n      text: \"\",\n      skip_reason: \"no_customer_message\",\n      raw_event: body\n    }\n  }];\n}\n\nreturn results;"
+      },
+      "id": "b72bd454-9767-4736-b068-64f3db3d9817",
+      "name": "Normalize Facebook Events1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        9936
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb-real-message",
+              "leftValue": "={{ $json.event_type === 'message' && $json.message_type === 'text' && String($json.text || '').trim().length > 0 && String($json.fb_recipient_id || '').trim().length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1aec8d85-2e6e-4621-bd63-3c9257942ab7",
+      "name": "Facebook Has Real Message?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1696,
+        9936
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true,\"skipped\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "402527e7-4bbd-4b8b-8ac2-f1d05e1398fa",
+      "name": "Facebook Respond 200 (Skip)1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2592,
+        9840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-any-customer-payload",
+              "leftValue": "={{ $json.should_send_customer_reply === true && (!!$json.replyPayload || !!$json.fbReplyPayload) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "430490ac-5faa-46ac-a876-48ee8cc196e3",
+      "name": "Has Customer Reply Payload?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3984,
+        10560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-facebook-ai-reply",
+              "leftValue": "={{ String($json.platform || '').toLowerCase() === 'facebook' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d267e3e1-eddd-448b-af9f-78609630164f",
+      "name": "AI Platform Route: Facebook?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4160,
+        10704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/me/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $json.page_access_token }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.fbReplyPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "dc5fe0ed-b0c5-4415-b6d7-0b2f1f44e26a",
+      "name": "Facebook Send AI Reply1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        10416
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6c1f35d-0bcf-4d61-8b4a-9e7b8d65a001",
+              "leftValue": "={{ $json.brain_response?.should_handoff === true || $json.brain_response?.recommended_action === 'handoff_admin' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4b69ae4b-51e5-448f-8594-57b7f0297bc5",
+      "name": "Should notify admin after reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4384,
+        10128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "skip-reply-admin-takeover",
+              "leftValue": "={{ $json.brain_response?.recommended_action === 'skip_reply' && $json.brain_response?.decision_meta?.reason === 'admin_takeover_active' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2a223500-609a-4b5a-9ce6-675de99fe6e4",
+      "name": "Should notify admin takeover?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4384,
+        11136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const brain = $json.brain_response || {};\nconst adminSummary = brain.admin_summary || {};\nconst isAdminTakeover = brain.recommended_action === 'skip_reply' && brain.decision_meta?.reason === 'admin_takeover_active';\n\nreturn [{\n  json: {\n    request_id: `n8n_line_handoff_${Date.now()}_${$execution.id}`,\n    source: isAdminTakeover ? `${String($json.platform || 'line')}_fix_skip_reply` : `${String($json.platform || 'line')}_fix_reply_handoff`,\n    channel: String($json.platform || 'line'),\n    channel_user_id: $json.platform_user_id || $json.line_user_id || null,\n    message_id: $json.raw_event?.message?.id || null,\n    customer_message: String($json.text || ''),\n    intent: brain.intent || 'admin_handoff',\n    confidence: typeof brain.confidence === 'number' ? brain.confidence : 1,\n    reason: isAdminTakeover ? 'HUMAN_OWNED_BLOCK' : 'handoff_required',\n    summary: adminSummary.summary || (isAdminTakeover ? 'AI silent (Handover Active)' : 'AI replied to customer and requested admin follow-up'),\n    recommended_next_action: adminSummary.recommended_next_action || (isAdminTakeover ? 'wait_for_admin_followup' : 'admin_review_and_contact'),\n    extracted_fields: brain.extracted_fields || {},\n    missing_fields: Array.isArray(brain.missing_fields) ? brain.missing_fields : [],\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ae41064c-9ec5-41d7-9191-8a056fe86367",
+      "name": "Build Admin Runtime Handoff Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4608,
+        10128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://admin.paaair.online/webhook/admin_runtime_handoff",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "eb14047d-de28-4b07-98e4-827536099227",
+      "name": "Notify Admin Runtime Handoff",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4832,
+        10128
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ !!$json.cmd && /^(MENU|ADMIN):/i.test(String($json.cmd).trim()) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a2d14105-620e-44f4-87a7-5e41e3271200",
+      "name": "isCommand1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2816,
+        10064
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57809c1a-7806-4276-9a3c-987e7f05257d",
+              "name": "platform",
+              "value": "={{ $json.platform || 'line' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-1",
+              "name": "account_key",
+              "value": "={{ $json.account_key }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "channel_platform_id",
+              "value": "={{ $json.channel_platform_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "platform_user_id",
+              "value": "={{ $json.platform_user_id || $json.line_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "event_type",
+              "value": "={{ $json.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "cmd",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-7",
+              "name": "reply_token",
+              "value": {},
+              "type": "string"
+            },
+            {
+              "id": "id-8",
+              "name": "timestamp",
+              "value": "={{ $json.ts }}",
+              "type": "number"
+            },
+            {
+              "id": "id-9",
+              "name": "raw",
+              "value": "={{ JSON.stringify($json.raw_event) }}",
+              "type": "object"
+            },
+            {
+              "id": "e6cfde32-c4a2-40a3-a918-1c1fd5e350f2",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "650a2024-ca26-49e9-b21c-1de1cc0fe7b6",
+      "name": "Build Unified Inbox Payload (Plain Text)1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4608,
+        11184
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.INBOX_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "8e978444-ab9c-4cc3-ab75-838bb020d62e",
+      "name": "Unified Inbox Ingest (Plain Text)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        11184
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fed5db04-4c02-450b-ab5a-19a1e0ffd235",
+      "name": "LINE Webhook (POST) /webhook/line",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1248,
+        11056
+      ],
+      "webhookId": "097b9de9-4c7f-497d-90da-0820ed0b213d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve OA by LINE webhook \"destination\"\nconst body = $json.body ?? $json;\nconst dest = String(body?.destination || '').trim();\n\n// map destination -> account_key + channel_platform_id\n// OA3 (PA Cool): update channel_platform_id to the real LINE channel ID once known\nconst DEST_TO = {\n  \"U7ca0e85474df0c18189cd593a5d469c1\": { account_key: \"PAA Air\",  channel_platform_id: \"2007958198\" }, // OA1\n  \"Ue0329c8bb058d3f3014b856a8b3c3dce\": { account_key: \"P&A Air\",  channel_platform_id: \"2007779665\" }, // OA2\n  \"U1eee2ec37e5f71c20f38dd52154f6ad7\": { account_key: \"PA Cool\",  channel_platform_id: \"2008387791\" },    // OA3 - replace PA_COOL with real channel ID\n};\n\nconst m = DEST_TO[dest];\nif (!m) {\n  return [{ json: { ok: false, error: \"unknown_destination\", destination: dest, body } }];\n}\n\nreturn [{\n  json: {\n    ...$json,\n    account_key: m.account_key,\n    channel_platform_id: m.channel_platform_id,\n  }\n}];"
+      },
+      "id": "9e59c17d-e1fe-4bb8-ac74-f2f10d926a5b",
+      "name": "Resolve OA (destination -> channel_platform_id)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        11056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Explode LINE body.events[] -> 1 item per event\nconst req = $json;\nconst body = req.body ?? req;\nconst events = Array.isArray(body?.events) ? body.events : [];\n\nreturn events.map((event) => {\n  const event_type = String(event?.type || '').toLowerCase();\n  const message_type = String(event?.message?.type || '').toLowerCase();\n  const line_user_id = event?.source?.userId || null;\n  const reply_token = event?.replyToken || \"\";\n  const text = message_type === 'text' ? String(event?.message?.text || '').trim() : '';\n  const postback_data = event_type === 'postback' ? String(event?.postback?.data || '').trim() : '';\n  const cmd = String(postback_data || text || '').trim();\n\n  return {\n    json: {\n      account_key: req.account_key,\n      channel_platform_id: req.channel_platform_id,\n      event_type,\n      message_type,\n      line_user_id,\n      reply_token,\n      text,\n      postback_data,\n      cmd,\n      ts: event?.timestamp || null,\n      raw_event: {\n        type: event?.type,\n        mode: event?.mode,\n        source: event?.source,\n        timestamp: event?.timestamp,\n        message: event?.message,\n        postback: event?.postback,\n      }\n    }\n  };\n});"
+      },
+      "id": "2aa5e578-6b49-4039-99b4-19346ad06f9b",
+      "name": "Explode Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        11056
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa1",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8d50fced-239b-4cd9-a8e6-33cb3292e28a",
+      "name": "Route OA1 vs OA1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2592,
+        9472
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "ADMIN_TO",
+              "value": "C2993305f7ca45fa78bbb66abaf5e6901",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c298ec03-d425-41cd-8787-357bca004760",
+      "name": "Config OA1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        9200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "ADMIN_TO",
+              "value": "U42b1d0791fbfc61b32d503d500d9165c",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9844a8a7-d1ba-4262-a9f5-58742b4961b7",
+      "name": "Config OA7",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3040,
+        9472
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "LIFF_BOOK_URL",
+              "value": "https://liff.line.me/2008445752-IZ9iXrPC",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "ADMIN_TO",
+              "value": "FILL_IN_PA_COOL_ADMIN_TO",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "INBOX_BASE_URL",
+              "value": "https://admin.paaair.online/webhook/line/chat",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "2bc749bb-4c1b-4fb2-89fe-d6c77e675092",
+      "name": "Config OA8",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3040,
+        9664
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa2",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007779665",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "54457e39-4d1b-42e0-a85b-91024249ad08",
+      "name": "Route OA2 vs OA1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2816,
+        9568
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const LIFF = String($json.LIFF_BOOK_URL || '').trim();\nconst replyToken = String($json.reply_token || '').trim();\nconst cmd = String($json.cmd || '').trim();\nconst headerColor = \"#06C755\";\n\nconst prices = [\n  { label: \"9,000 BTU\", price: \"700\" },\n  { label: \"12,000 - 13,000 BTU\", price: \"800\" },\n  { label: \"18,000 BTU\", price: \"900\" },\n  { label: \"24,000 BTU\", price: \"1,000\" },\n];\nconst addons = [\n  { item: \"น้ำยาฆ่าเชื้อ (ล้างคอยล์)\", price: \"+100\" },\n  { item: \"ระบบ Inverter\", price: \"+100\" },\n  { item: \"ตรวจเช็ค/ประเมินหน้างาน\", price: \"1,000+\", note: \"กรณีเช็คแล้วไม่ซ่อม\" },\n];\n\nconst postbackAction = (label, data) => ({ type: \"postback\", label, data });\n\nfunction genPriceFlex() {\n  const priceRows = prices.map((p) => ({ type: \"box\", layout: \"horizontal\", contents: [{ type: \"text\", text: p.label, size: \"sm\", color: \"#555555\", flex: 3 }, { type: \"text\", text: `${p.price}.-`, size: \"sm\", color: \"#111111\", weight: \"bold\", align: \"end\", flex: 1 }], margin: \"md\" }));\n  const addonRows = addons.flatMap((a) => { const mainRow = { type: \"box\", layout: \"horizontal\", contents: [{ type: \"text\", text: `🔧 ${a.item}`, size: \"xs\", color: \"#666666\", flex: 3, wrap: true }, { type: \"text\", text: a.price, size: \"xs\", color: \"#ff334b\", weight: \"bold\", align: \"end\", flex: 1, adjustMode: \"shrink-to-fit\" }], margin: \"sm\" }; if (!a.note) return [mainRow]; return [mainRow, { type: \"text\", text: a.note, size: \"xxs\", color: \"#999999\", margin: \"xs\", wrap: true }]; });\n  return { type: \"flex\", altText: \"ตารางราคาล้างแอร์ 2026\", contents: { type: \"bubble\", size: \"mega\", header: { type: \"box\", layout: \"vertical\", backgroundColor: headerColor, paddingAll: \"lg\", contents: [{ type: \"text\", text: \"❄️ ราคาล้างแอร์ติดผนัง\", weight: \"bold\", color: \"#ffffff\", size: \"lg\" }, { type: \"text\", text: \"อัปเดตปี 2026\", color: \"#ffffffcc\", size: \"xs\", margin: \"xs\" }] }, body: { type: \"box\", layout: \"vertical\", contents: [{ type: \"text\", text: \"ราคาเริ่มต้น (ล้างปกติ)\", weight: \"bold\", size: \"md\", color: \"#333333\" }, { type: \"separator\", margin: \"md\", color: \"#eeeeee\" }, ...priceRows, { type: \"separator\", margin: \"lg\", color: \"#eeeeee\" }, { type: \"box\", layout: \"vertical\", margin: \"lg\", backgroundColor: \"#f7f7f7\", cornerRadius: \"md\", paddingAll: \"md\", contents: [{ type: \"text\", text: \"📌 บริการเสริม & เงื่อนไข\", size: \"xs\", weight: \"bold\", color: \"#333333\" }, ...addonRows, { type: \"separator\", margin: \"md\", color: \"#e0e0e0\" }, { type: \"text\", text: \"🛡️ รับประกันน้ำหยดหลังล้าง 30 วัน\", size: \"xs\", color: headerColor, weight: \"bold\", align: \"center\", margin: \"md\" }] }] }, footer: { type: \"box\", layout: \"vertical\", spacing: \"sm\", contents: [{ type: \"button\", style: \"primary\", color: headerColor, action: { type: \"uri\", label: \"จองคิวทันที\", uri: LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\" } }, { type: \"button\", style: \"secondary\", action: postbackAction(\"คุยกับแอดมิน\", \"MENU:TALK_ADMIN\") }] } } };\n}\n\nfunction adminGateMenu() { return { type: \"text\", text: \"เลือกหัวข้อติดต่อแอดมินครับ 👇\", quickReply: { items: [{ type: \"action\", action: postbackAction(\"ติดตามงาน\", \"ADMIN:TRACK\") }, { type: \"action\", action: postbackAction(\"แจ้งปัญหา\", \"ADMIN:ISSUE\") }, { type: \"action\", action: postbackAction(\"อื่นๆ\", \"ADMIN:OTHER\") }] } }; }\nfunction adminAck(reason) { return { type: \"text\", text: `รับเรื่องแล้วครับ (${reason}) แอดมินจะติดต่อกลับให้เร็วที่สุด\\nพิมพ์รายละเอียดเพิ่มได้เลย (ชื่อ/เบอร์/เลขงาน/ที่อยู่)` }; }\nfunction bookMsg() { const link = LIFF || \"https://liff.line.me/2008445752-IZ9iXrPC\"; return { type: \"text\", text: `📅 จองคิวออนไลน์ได้ที่นี่ครับ\\n${link}` }; }\nfunction askAiIntro() { return { type: \"text\", text: \"สวัสดีครับ 👋\\nสอบถามเบื้องต้นได้เลย เช่น ราคา / พื้นที่บริการ / รับซ่อมไหม / ค่าตรวจเช็ค/ประเมินหน้างานเท่าไร\\nค่าตรวจเช็ค/ประเมินหน้างาน เริ่มต้น 1,000 บาท กรณีเช็กแล้วไม่ซ่อม\\nถ้าต้องการจองคิว ประเมินหน้างาน หรือตามงาน ผมจะส่งต่อแอดมินให้ครับ\" }; }\n\nlet route = \"IGNORE\";\nlet replyPayload = null;\nlet pushPayload = null;\n\nif (!replyToken) { return [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }]; }\n\nif (cmd === \"MENU:PRICE_CLEAN\") {\n  route = \"PRICE_SHOW\";\n  const announcementText = { type: \"text\", text: \"📢 ประกาศแจ้งปรับราคาบริการล้างแอร์\\nเนื่องจากต้นทุนในการเดินทางและการให้บริการปรับตัวสูงขึ้น ทางบริษัทขอแจ้งปรับราคาเริ่มต้นของบริการล้างแอร์ ดังนี้\" };\n  const followUpText = { type: \"text\", text: \"หลังดูราคาแล้ว ถ้าต้องการสอบถามเบื้องต้น พิมพ์ถามได้เลย หรือกด “ติดต่อแอดมิน” ได้ทันทีค่ะ\\nค่าตรวจเช็ค/ประเมินหน้างาน เริ่มต้น 1,000 บาท กรณีเช็คแล้วไม่ซ่อม\" };\n  replyPayload = { replyToken, messages: [announcementText, genPriceFlex(), followUpText] };\n} else if (cmd === \"MENU:BOOK\") {\n  route = \"BOOK\";\n  replyPayload = { replyToken, messages: [bookMsg()] };\n} else if (cmd === \"MENU:ASK_AI\") {\n  route = \"ASK_AI\";\n  replyPayload = { replyToken, messages: [askAiIntro()] };\n} else if (cmd === \"MENU:TALK_ADMIN\") {\n  route = \"ADMIN_MENU\";\n  replyPayload = { replyToken, messages: [adminGateMenu()] };\n} else {\n  const m = cmd.match(/^ADMIN:(TRACK|ISSUE|OTHER)$/);\n  if (m) {\n    route = \"ADMIN_PUSH\";\n    const reasonMap = { TRACK: \"ติดตามงาน\", ISSUE: \"แจ้งปัญหา\", OTHER: \"อื่นๆ\" };\n    const reason = reasonMap[m[1]] || m[1];\n    replyPayload = { replyToken, messages: [adminAck(reason)] };\n    const adminTo = String($json.ADMIN_TO || \"\").trim();\n    if (adminTo) {\n      const who = String($json.line_user_id || $json.platform_user_id || \"unknown\");\n      pushPayload = { to: adminTo, messages: [{ type: \"text\", text: `🔔 ลูกค้าขอคุยแอดมิน\\nหัวข้อ: ${reason}\\nผู้ใช้: ${who}\\nOA: ${$json.account_key || \"-\"}\\nเวลา: ${new Date().toLocaleString('th-TH')}` }] };\n    }\n  }\n}\n\nreturn [{ json: { ...$json, route, replyPayload, pushPayload, cmd } }];"
+      },
+      "id": "b237597c-bd4c-4f77-a30a-42d9c48b4bd3",
+      "name": "Build Rich Menu Reply (MENU:*)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3264,
+        9472
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-reply",
+              "leftValue": "={{ $json.replyPayload }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "e7c07164-72ec-4d62-80b3-3a88cf717b5a",
+      "name": "Has Reply Payload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        9472
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "24d8bc46-cd90-449b-aef9-175cc4fbbc49",
+      "name": "Reply Route OA1 vs OA1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4384,
+        9472
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa2-reply",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007779665",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "da2a0c2c-f3fd-4de3-93af-c1580f073f36",
+      "name": "Route OA2 vs OA3 Reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4608,
+        9568
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c61e4469-863c-4201-97e9-4df3e1904ebc",
+      "name": "LINE Reply (OA1 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4592,
+        9200
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "7da56e59-7407-406c-9d6e-61d65002419f",
+      "name": "LINE Reply (OA2 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        9472
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "f82b3811-8de0-4ba7-bbe3-ced652a6fea9",
+      "name": "LINE Reply (OA3 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        9664
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-push",
+              "leftValue": "={{ !!$json.pushPayload && !!$json.pushPayload.to && String($json.pushPayload.to).trim().length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "351ca3bf-af75-43e0-b603-fd59bb0af77d",
+      "name": "Has Admin Push?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3488,
+        9568
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-oa3-push",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "PA_COOL",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b9261e5e-f632-4257-98f7-4933bec24c89",
+      "name": "Route Push OA3?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3712,
+        9568
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.pushPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "7ba7440a-1e13-456d-80ca-8bdd6fe6f3eb",
+      "name": "LINE Push Admin (OA1 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3936,
+        9472
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.pushPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "7ba2b9ac-ba5a-4955-b42b-630771685c70",
+      "name": "LINE Push Admin (OA3 Credential)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3936,
+        9664
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "2131c7b1-2512-4bde-9706-343f28e53664",
+      "name": "Respond 1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        5104,
+        10304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json || {};\nconst orig = $('Normalize cmd').item.json;\nconst aiText = String(body.customer_reply || '').trim();\nconst hasReply = body.ok === true && !!aiText;\n\nreturn [{ json: { ...orig, brain_response: body, aiText, hasReply } }];"
+      },
+      "id": "b66ba061-e6ec-47c8-baaa-e245c11932e5",
+      "name": "Normalize paa-ai-brain",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3312,
+        10336
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-brain-reply-1",
+              "leftValue": "={{ $json.hasReply === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d7ce68a-297c-426f-8581-242478460cc6",
+      "name": "Has reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3520,
+        10448
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const runtimeMode = String($json.RUNTIME_MODE || $json.runtime_mode || 'shadow').trim().toLowerCase();\nconst isLive = runtimeMode === 'live';\nconst isShadow = !isLive;\nconst platform = String($json.platform || $json.brain_payload?.channel || 'line').toLowerCase();\nconst aiText = String($json.aiText || $json.brain_response?.customer_reply || '').trim();\n\nlet replyPayload = null;\nlet fbReplyPayload = null;\nlet shouldSend = false;\nlet send_block_reason = null;\n\nif (isLive && aiText) {\n  if (platform === 'facebook') {\n    const recipientId = String($json.fb_recipient_id || $json.platform_user_id || $json.line_user_id || '').trim();\n    const pageToken = String($json.page_access_token || '').trim();\n\n    if (recipientId && pageToken) {\n      fbReplyPayload = {\n        recipient: { id: recipientId },\n        messaging_type: \"RESPONSE\",\n        message: { text: aiText }\n      };\n      shouldSend = true;\n    } else {\n      send_block_reason = !recipientId ? 'missing_facebook_recipient_id' : 'missing_facebook_page_access_token';\n    }\n  } else {\n    const replyToken = String($json.reply_token || '').trim();\n    if (replyToken) {\n      replyPayload = { replyToken, messages: [{ type: \"text\", text: aiText }] };\n      shouldSend = true;\n    } else {\n      send_block_reason = 'missing_line_reply_token';\n    }\n  }\n} else if (!aiText) {\n  send_block_reason = 'missing_ai_text';\n} else {\n  send_block_reason = 'shadow_mode';\n}\n\nreturn [{\n  json: {\n    ...$json,\n    replyPayload,\n    fbReplyPayload,\n    should_send_customer_reply: shouldSend,\n    runtime_mode: runtimeMode,\n    shadow_customer_reply_blocked: isShadow,\n    send_block_reason\n  }\n}];"
+      },
+      "id": "6b008e85-29b2-4728-a18e-4a644b0c8c14",
+      "name": "Build AI Reply Payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3712,
+        10560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1-ai",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7ed0b6e5-59c8-4962-9904-e1c6f797e264",
+      "name": "AI Reply Route OA1 vs OA",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4384,
+        10800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa2-ai",
+              "leftValue": "={{ String($json.channel_platform_id || '') }}",
+              "rightValue": "2007779665",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6e48fc00-f842-4e4b-8f7c-7313186f03ee",
+      "name": "Route OA2 vs OA3 AI Reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4608,
+        10896
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "df77af76-262b-4726-8c2a-bb384ba67c58",
+      "name": "LINE Reply AI (OA1)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        10608
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "3de48c56-4096-41b8-bbc1-1794166a0b4d",
+      "name": "LINE Reply AI (OA2)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        10800
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replyPayload }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "24bc8538-308b-4632-9b4f-30af5ee43748",
+      "name": "LINE Reply AI (OA3)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        10992
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://brain.paaair.online/api/ai/respond",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-ai-gateway-key",
+              "value": "=PAA_BRAIN_SECURE_98de237f"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.brain_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 45000
+        }
+      },
+      "id": "0dd99246-221e-45e4-8ce6-111dd59c346d",
+      "name": "Call paa-ai-brain",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3104,
+        10336
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "showLoadingAnimation",
+        "chatId": "={{ String($json.line_user_id || $json.platform_user_id || $json.raw_event?.source?.userId || '') }}"
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        5696,
+        10800
+      ],
+      "id": "0800b6c0-5ed3-4735-bb23-9051fc285b5b",
+      "name": "P&A1",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "YHPw9pv40wqTVB5i",
+          "name": "Line P&A"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-token",
+              "leftValue": "={{ $json.raw_event?.message?.markAsReadToken }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "42fe4096-1b07-4325-94b4-b17bcdd2f089",
+      "name": "Has markAsReadToken?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2064,
+        10736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa1",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007958198",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8d3a4ebd-fc15-48d4-9781-3ba7066566f6",
+      "name": "Mark Read OA Route",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2288,
+        10736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-oa2-read",
+              "leftValue": "={{ $json.channel_platform_id }}",
+              "rightValue": "2007779665",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6637d411-b6f9-4be4-948a-6296e7dbb6df",
+      "name": "Mark Read OA2 vs OA3 Route",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2512,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/chat/markAsRead",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"markAsReadToken\": \"{{ $json.raw_event.message.markAsReadToken }}\"\n}",
+        "options": {}
+      },
+      "id": "a87d71ae-4ac7-44c7-b09f-e82318479a26",
+      "name": "LINE Mark Read (OA1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2512,
+        10640
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/chat/markAsRead",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"markAsReadToken\": \"{{ $json.raw_event.message.markAsReadToken }}\"\n}",
+        "options": {}
+      },
+      "id": "b63277a7-62ef-4752-9c94-322b666c8577",
+      "name": "LINE Mark Read (OA2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2736,
+        10640
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "Uc4SrPMvEa9xlQKN",
+          "name": "P&A Air Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/chat/markAsRead",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"markAsReadToken\": \"{{ $json.raw_event.message.markAsReadToken }}\"\n}",
+        "options": {}
+      },
+      "id": "3dd3084c-71a7-4756-9f20-b18e2af9b405",
+      "name": "LINE Mark Read (OA3)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2736,
+        10832
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const runtimeMode = String($json.RUNTIME_MODE || 'shadow').trim().toLowerCase();\nconst brain = $json.brain_response || {};\nconst aiText = String($json.aiText || '').trim();\nconst intent = brain.intent || 'unknown';\nconst confidence = typeof brain.confidence === 'number' ? brain.confidence : null;\nconst missing = Array.isArray(brain.missing_fields) ? brain.missing_fields : [];\nconst userText = String($json.text || '').trim();\n\nconst lines = [\n  runtimeMode === 'shadow' ? '🕶️ [SHADOW AI REVIEW]' : '🤖 [LIVE AI REVIEW]',\n  `OA: ${String($json.account_key || '-')}`,\n  `User: ${String($json.platform_user_id || $json.line_user_id || '-')}`,\n  `Intent: ${intent}`,\n  confidence === null ? 'Confidence: -' : `Confidence: ${confidence}`,\n  '',\n  'ลูกค้าพิมพ์:',\n  userText || '-',\n  '',\n  'AI Draft:',\n  aiText || '(no draft)'\n];\n\nif (brain.recommended_action) lines.push('', `Recommended: ${brain.recommended_action}`);\nif (missing.length) lines.push(`Missing: ${missing.join(', ')}`);\n\nreturn [{\n  json: {\n    account_key: $json.account_key,\n    channel_platform_id: $json.channel_platform_id,\n    platform_user_id: $json.platform_user_id || $json.line_user_id,\n    event_type: 'shadow_ai_review',\n    text: lines.join('\\n'),\n    cmd: null,\n    reply_token: null,\n    timestamp: Date.now(),\n    raw: JSON.stringify({ runtime_mode: runtimeMode, customer_text: userText, ai_draft: aiText, brain_response: brain, source_event: $json.raw_event || null }),\n    INBOX_BASE_URL: 'https://admin.paaair.online/webhook/line/chat'\n  }\n}];"
+      },
+      "id": "26656942-ad18-45c9-9c76-6f60b3206227",
+      "name": "Build Shadow Inbox Payload (AI Toggle)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4608,
+        11376
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.INBOX_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "5b2b83a3-8844-4db9-9399-8d06de652fa6",
+      "name": "Unified Inbox Ingest (AI Toggle)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        11376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const brain = $json.brain_response || {};\nconst runtimeMode = String($json.RUNTIME_MODE || $json.runtime_mode || 'shadow').trim().toLowerCase();\nconst nowIso = new Date().toISOString();\nconst accountKey = String($json.account_key || '');\nconst channelPlatformId = String($json.channel_platform_id || '');\nconst lineUserId = String($json.line_user_id || '');\nconst customerText = String($json.text || '').trim();\nconst aiDraft = String($json.aiText || brain.customer_reply || '').trim();\nconst missingFields = Array.isArray(brain.missing_fields) ? brain.missing_fields : [];\nconst extractedFields = brain.extracted_fields || {};\nconst metadata = brain.metadata || {};\nconst decisionMeta = brain.decision_meta || {};\nconst sourceEvent = $json.raw_event || null;\nconst ts = $json.ts || Date.now();\n\nconst reviewId = `SR-${ts}-${Math.random().toString(36).slice(2, 8)}`;\nconst caseKey = [accountKey, channelPlatformId, lineUserId].join('|');\nconst turnKey = [caseKey, ts].join('|');\n\nreturn [{\n  json: {\n    review_id: reviewId,\n    reviewed_at: nowIso,\n    runtime_mode: runtimeMode,\n    account_key: accountKey,\n    channel_platform_id: channelPlatformId,\n    line_user_id: lineUserId,\n    case_key: caseKey,\n    turn_key: turnKey,\n    customer_text: customerText,\n    active_flow_before: String(metadata.active_flow || ''),\n    active_flow_after: String(metadata.active_flow_after || metadata.active_flow || ''),\n    ai_intent: String(brain.intent || ''),\n    ai_confidence: typeof brain.confidence === 'number' ? brain.confidence : '',\n    ai_draft: aiDraft,\n    recommended_action: String(brain.recommended_action || ''),\n    should_handoff: brain.should_handoff === true ? 'true' : 'false',\n    missing_fields: missingFields.join(', '),\n    rule_hit: String(metadata.rule_hit || decisionMeta.rule_hit || ''),\n    intercept_source: String(metadata.intercept_source || decisionMeta.intercept_source || ''),\n    canonical_topic: String(metadata.canonical_topic || decisionMeta.canonical_topic || ''),\n    handoff_state: String(metadata.handoff_state || ''),\n    human_final_reply: '',\n    review_label: '',\n    is_correct: '',\n    gap_score: '',\n    bug_group: '',\n    severity: '',\n    fix_status: 'open',\n    root_cause: '',\n    promoted_to_rule: '',\n    reviewer: '',\n    note: '',\n    brain_response_json: JSON.stringify(brain),\n    raw_json: JSON.stringify(sourceEvent),\n    extracted_fields_json: JSON.stringify(extractedFields),\n    decision_meta_json: JSON.stringify(decisionMeta)\n  }\n}];"
+      },
+      "id": "ba523968-03dc-42f9-b73c-a3de9d6ff56a",
+      "name": "Build Shadow Review Row v",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        10096
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "112BRLusfJF6efpYK9ZLt_jS9L6t08qF3CziPZGJ_C8o",
+          "mode": "list",
+          "cachedResultName": "Shadow_Reviews_Template_v2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/112BRLusfJF6efpYK9ZLt_jS9L6t08qF3CziPZGJ_C8o/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 504407337,
+          "mode": "list",
+          "cachedResultName": "shadow_reviews",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/112BRLusfJF6efpYK9ZLt_jS9L6t08qF3CziPZGJ_C8o/edit#gid=504407337"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "review_id": "={{ $json.review_id }}",
+            "reviewed_at": "={{ $json.reviewed_at }}",
+            "runtime_mode": "={{ $json.runtime_mode }}",
+            "account_key": "={{ $json.account_key }}",
+            "channel_platform_id": "={{ $json.channel_platform_id }}",
+            "line_user_id": "={{ $json.line_user_id }}",
+            "case_key": "={{ $json.case_key }}",
+            "turn_key": "={{ $json.turn_key }}",
+            "customer_text": "={{ $json.customer_text }}",
+            "active_flow_before": "={{ $json.active_flow_before }}",
+            "ai_intent": "={{ $json.ai_intent }}",
+            "ai_confidence": "={{ $json.ai_confidence }}",
+            "ai_draft": "={{ $json.ai_draft }}",
+            "recommended_action": "={{ $json.recommended_action }}",
+            "should_handoff": "={{ $json.should_handoff }}",
+            "missing_fields": "={{ $json.missing_fields }}",
+            "human_final_reply": "={{ $json.human_final_reply || '' }}",
+            "review_label": "={{ $json.review_label || '' }}",
+            "is_correct": "={{ $json.is_correct || '' }}",
+            "gap_score": "={{ $json.gap_score || '' }}",
+            "bug_group": "={{ $json.bug_group || '' }}",
+            "severity": "={{ $json.severity || '' }}",
+            "fix_status": "={{ $json.fix_status || 'open' }}",
+            "root_cause": "={{ $json.root_cause || '' }}",
+            "promoted_to_rule": "={{ $json.promoted_to_rule || '' }}",
+            "reviewer": "={{ $json.reviewer || '' }}",
+            "note": "={{ $json.note || '' }}",
+            "brain_response_json": "={{ $json.brain_response_json }}",
+            "raw_json": "={{ $json.raw_json }}",
+            "extracted_fields_json": "={{ $json.extracted_fields_json }}",
+            "decision_meta_json": "={{ $json.decision_meta_json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "review_id",
+              "displayName": "review_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reviewed_at",
+              "displayName": "reviewed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "runtime_mode",
+              "displayName": "runtime_mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "account_key",
+              "displayName": "account_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channel_platform_id",
+              "displayName": "channel_platform_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "line_user_id",
+              "displayName": "line_user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "case_key",
+              "displayName": "case_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "turn_key",
+              "displayName": "turn_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_text",
+              "displayName": "customer_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "active_flow_before",
+              "displayName": "active_flow_before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_intent",
+              "displayName": "ai_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_draft",
+              "displayName": "ai_draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recommended_action",
+              "displayName": "recommended_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "should_handoff",
+              "displayName": "should_handoff",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "missing_fields",
+              "displayName": "missing_fields",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "human_final_reply",
+              "displayName": "human_final_reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "review_label",
+              "displayName": "review_label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "is_correct",
+              "displayName": "is_correct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gap_score",
+              "displayName": "gap_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bug_group",
+              "displayName": "bug_group",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fix_status",
+              "displayName": "fix_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "root_cause",
+              "displayName": "root_cause",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "promoted_to_rule",
+              "displayName": "promoted_to_rule",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reviewer",
+              "displayName": "reviewer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "brain_response_json",
+              "displayName": "brain_response_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "raw_json",
+              "displayName": "raw_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "extracted_fields_json",
+              "displayName": "extracted_fields_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision_meta_json",
+              "displayName": "decision_meta_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "973e2859-9663-4106-9c70-e7d4aa97f528",
+      "name": "Google Sheets - Append shadow_reviews v",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3936,
+        10096
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BykEv7u19ZS0d8hw",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 12
+            }
+          ]
+        }
+      },
+      "id": "54327bb1-c465-4719-8d44-a724d1ca170c",
+      "name": "Every 12 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        11712
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://brain.paaair.online/api/admin/follow-up",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-cron-secret",
+              "value": "8361a08f404822213cd965a21e74650b175fc696ff1004f9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5636c8f8-5424-4b55-a881-24d47801f14c",
+      "name": "Call Follow-Up API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        11712
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        11936
+      ],
+      "id": "93b37b07-bb4a-416a-a8fc-dc4d42654ca7",
+      "name": "Every 30 Minutes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://brain.paaair.online/api/admin/auto-release-stale",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-cron-secret",
+              "value": "8361a08f404822213cd965a21e74650b175fc696ff1004f9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        11936
+      ],
+      "id": "dac08167-d54c-42a7-864f-7379e1086bc4",
+      "name": "Call Auto-Release Stale"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "brain-gate-event-type",
+              "leftValue": "={{ ['message'].includes(String($json.event_type || '').toLowerCase()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "brain-gate-message-type",
+              "leftValue": "={{ String($json.message_type || '').toLowerCase() === 'text' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "brain-gate-has-text",
+              "leftValue": "={{ String($json.text || '').trim().length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "brain-gate-no-command",
+              "leftValue": "={{ !/^(MENU|ADMIN):/i.test(String($json.cmd || '').trim()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "brain-gate-no-unsupported-event",
+              "leftValue": "={{ !['follow', 'unfollow', 'postback'].includes(String($json.event_type || '').toLowerCase()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "41dd8ab4-9a29-4f0f-b634-28945016eee6",
+      "name": "Should Send To Brain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        10464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json || {};\n\nconst platform = String(input.platform || input.channel || 'line').trim().toLowerCase();\nconst channelUserId = String(input.channel_user_id || input.platform_user_id || input.line_user_id || input.sender_platform_id || input.raw_event?.sender?.id || input.raw_event?.source?.userId || '').trim();\nconst channelPlatformId = String(input.channel_platform_id || input.fb_page_id || input.page_id || input.raw_event?.recipient?.id || '').trim();\nconst accountKey = String(input.account_key || input.page_name || '').trim();\nconst text = String(input.text || input.content || input.message_text || input.raw_event?.message?.text || '').trim();\nconst messageId = input.platform_message_id || input.raw_event?.message?.mid || input.raw_event?.message?.id || input.message_id || null;\nconst messageType = input.message_type || input.raw_event?.message?.type || (text ? 'text' : 'unknown');\nconst timestamp = input.ts || input.timestamp || input.raw_event?.timestamp || Date.now();\n\nlet runtimeMode = String(input.RUNTIME_MODE || input.runtime_mode || 'shadow').trim().toLowerCase();\nif (runtimeMode === 'active') runtimeMode = 'live';\nif (!['shadow', 'live'].includes(runtimeMode)) runtimeMode = 'shadow';\n\nconst missing = [];\nif (!platform) missing.push('channel');\nif (!channelUserId) missing.push('channelUserId');\nif (!channelPlatformId) missing.push('channelPlatformId');\nif (!accountKey) missing.push('accountKey');\nif (!text) missing.push('customerMessage');\n\nreturn [{\n  json: {\n    ...input,\n    platform,\n    channel_platform_id: channelPlatformId,\n    platform_user_id: channelUserId,\n    line_user_id: input.line_user_id || channelUserId,\n    RUNTIME_MODE: runtimeMode,\n    schema_ok: missing.length === 0,\n    schema_error: missing.length ? { missing } : null,\n    brain_payload: {\n      channel: platform,\n      channelUserId,\n      channelPlatformId,\n      accountKey,\n      threadId: null,\n      customerMessage: text,\n      sourceEvent: {\n        replyToken: input.reply_token || null,\n        messageId,\n        messageType,\n        timestamp,\n        imageBase64: input.imageBase64 || null,\n        mediaUrl: input.media_url || input.attachment_url || input.raw_event?.media_url || null\n      },\n      runtime: {\n        requestId: `n8n_${platform}_main_${Date.now()}_${$execution.id}`,\n        receivedAt: new Date().toISOString(),\n        mode: `${platform}_text_inbound`,\n        runtimeMode\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        10528
+      ],
+      "id": "bcc3a6f9-ef2f-4afb-adf0-b2e31d922f78",
+      "name": "Normalize Runtime Payload Before Brain1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "737bec84-76d2-4659-beb4-23e3ab967ff6",
+              "leftValue": "={{ $json.schema_ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2816,
+        10528
+      ],
+      "id": "df02e4f5-5ba0-4ad8-ba6b-cdcbeaeca732",
+      "name": "Brain Schema OK?1"
+    },
+    {
+      "parameters": {
+        "operation": "showLoadingAnimation",
+        "chatId": "={{ String($json.line_user_id || $json.platform_user_id || $json.raw_event?.source?.userId || '') }}"
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        5712,
+        11248
+      ],
+      "id": "6203b204-05c0-4ca7-823a-05986a43f37f",
+      "name": "PAA1",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UljMfu8YB2JH1W4z",
+          "name": "PAA Air Service"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "showLoadingAnimation",
+        "chatId": "={{ String($json.line_user_id || $json.platform_user_id || $json.raw_event?.source?.userId || '') }}"
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        5696,
+        11040
+      ],
+      "id": "04cce9e9-36e3-4941-8b52-3b07b715bbc2",
+      "name": "PA1",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "i9D5nP6iUiD7LC4O",
+          "name": "PA Cool"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "paa",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "4968cf00-00f4-4642-9d7e-beff79a92bd5",
+      "name": "Facebook Webhook (GET/POST) /webhook/facebook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1024,
+        9840
+      ],
+      "webhookId": "facebook-runtime-multi-page"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "de16eaaf-529d-4f5b-95f5-7455b32164e8",
+              "leftValue": "={{ String($json.platform || 'line').toLowerCase() === 'line' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3504,
+        10256
+      ],
+      "id": "d31afbe8-68e4-4e20-8f92-65804d576a28",
+      "name": "Is LINE Platform?1"
+    }
+  ],
+  "pinData": {
+    "Facebook Webhook (GET/POST) /webhook/facebook1": [
+      {
+        "json": {
+          "headers": {
+            "host": "admin.paaair.online",
+            "user-agent": "facebookexternalua",
+            "content-length": "533",
+            "accept": "*/*",
+            "accept-encoding": "deflate, gzip",
+            "content-type": "application/json",
+            "facebook-api-version": "v23.0",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "69.171.231.8",
+            "x-forwarded-host": "admin.paaair.online",
+            "x-forwarded-proto": "https",
+            "x-hub-signature": "sha1=746fd43c96277fd412c5a4fe5cdadc0057b8191e",
+            "x-hub-signature-256": "sha256=c8f6e853857f84a426b525bfc2a9e31818f6cd75678eb1ba63c717c8eacdc298"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "object": "page",
+            "entry": [
+              {
+                "time": 1777469375256,
+                "id": "100744429333873",
+                "messaging": [
+                  {
+                    "sender": {
+                      "id": "27199538982983596"
+                    },
+                    "recipient": {
+                      "id": "100744429333873"
+                    },
+                    "timestamp": 1777469374480,
+                    "message": {
+                      "mid": "m_gx4wkqjuBQRf8DqbFYG9qx08Ifur05l3b4pyVycXuY74p9dRE6pXWU_3PfrjUCq-0cq9TK0ojJzB-58VNiH6Ew",
+                      "text": "ขอรายละเอียด ราคา+ติดตั้งแอร์ Haier 10,000 และ 18,000 btu ค่ะ"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "webhookUrl": "https://admin.paaair.online/webhook/paa",
+          "executionMode": "production"
+        },
+        "binary": {
+          "data": {
+            "data": "eyJvYmplY3QiOiJwYWdlIiwiZW50cnkiOlt7InRpbWUiOjE3Nzc0NjkzNzUyNTYsImlkIjoiMTAwNzQ0NDI5MzMzODczIiwibWVzc2FnaW5nIjpbeyJzZW5kZXIiOnsiaWQiOiIyNzE5OTUzODk4Mjk4MzU5NiJ9LCJyZWNpcGllbnQiOnsiaWQiOiIxMDA3NDQ0MjkzMzM4NzMifSwidGltZXN0YW1wIjoxNzc3NDY5Mzc0NDgwLCJtZXNzYWdlIjp7Im1pZCI6Im1fZ3g0d2txanVCUVJmOERxYkZZRzlxeDA4SWZ1cjA1bDNiNHB5VnljWHVZNzRwOWRSRTZwWFdVXzNQZnJqVUNxLTBjcTlUSzBvakp6Qi01OFZOaUg2RXciLCJ0ZXh0IjoiXHUwZTAyXHUwZTJkXHUwZTIzXHUwZTMyXHUwZTIyXHUwZTI1XHUwZTMwXHUwZTQwXHUwZTJkXHUwZTM1XHUwZTIyXHUwZTE0IFx1MGUyM1x1MGUzMlx1MGUwNFx1MGUzMitcdTBlMTVcdTBlMzRcdTBlMTRcdTBlMTVcdTBlMzFcdTBlNDlcdTBlMDdcdTBlNDFcdTBlMmRcdTBlMjNcdTBlNGMgSGFpZXIgMTAsMDAwIFx1MGU0MVx1MGUyNVx1MGUzMCAxOCwwMDAgYnR1IFx1MGUwNFx1MGU0OFx1MGUzMCJ9fV19XX0=",
+            "mimeType": "application/json"
+          }
+        },
+        "pairedItem": {
+          "item": 0,
+          "input": 1
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Supabase - Get Facebook Page Config": {
+      "main": [
+        [
+          {
+            "node": "Attach Facebook Page Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Facebook Page Config": {
+      "main": [
+        [
+          {
+            "node": "Facebook Config OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Config OK?": {
+      "main": [
+        [
+          {
+            "node": "Normalize cmd",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Facebook Respond 200 (Skip)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize cmd": {
+      "main": [
+        [
+          {
+            "node": "isCommand1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Shadow Review? v1": {
+      "main": [
+        [
+          {
+            "node": "Build Shadow Review Row v",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Facebook Verify?1": {
+      "main": [
+        [
+          {
+            "node": "Facebook Return Challenge1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Facebook Events1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Facebook Events1": {
+      "main": [
+        [
+          {
+            "node": "Facebook Has Real Message?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Has Real Message?1": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Get Facebook Page Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Facebook Respond 200 (Skip)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Customer Reply Payload?1": {
+      "main": [
+        [
+          {
+            "node": "AI Platform Route: Facebook?1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Platform Route: Facebook?1": {
+      "main": [
+        [
+          {
+            "node": "Facebook Send AI Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Reply Route OA1 vs OA",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "P&A1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PA1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PAA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Send AI Reply1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should notify admin after reply?": {
+      "main": [
+        [
+          {
+            "node": "Build Admin Runtime Handoff Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should notify admin takeover?": {
+      "main": [
+        [
+          {
+            "node": "Build Admin Runtime Handoff Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Unified Inbox Payload (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Admin Runtime Handoff Payload": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin Runtime Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Admin Runtime Handoff": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isCommand1": {
+      "main": [
+        [
+          {
+            "node": "Route OA1 vs OA1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Should Send To Brain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unified Inbox Payload (Plain Text)1": {
+      "main": [
+        [
+          {
+            "node": "Unified Inbox Ingest (Plain Text)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Inbox Ingest (Plain Text)1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Webhook (POST) /webhook/line": {
+      "main": [
+        [
+          {
+            "node": "Resolve OA (destination -> channel_platform_id)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve OA (destination -> channel_platform_id)": {
+      "main": [
+        [
+          {
+            "node": "Explode Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode Events": {
+      "main": [
+        [
+          {
+            "node": "Has markAsReadToken?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Normalize cmd",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "P&A1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PA1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PAA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA1 vs OA1": {
+      "main": [
+        [
+          {
+            "node": "Config OA1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route OA2 vs OA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA1": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA7": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config OA8": {
+      "main": [
+        [
+          {
+            "node": "Build Rich Menu Reply (MENU:*)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA2 vs OA1": {
+      "main": [
+        [
+          {
+            "node": "Config OA7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Config OA8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Rich Menu Reply (MENU:*)": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has Admin Push?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reply Payload?": {
+      "main": [
+        [
+          {
+            "node": "Reply Route OA1 vs OA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Route OA1 vs OA1": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply (OA1 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route OA2 vs OA3 Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA2 vs OA3 Reply": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply (OA2 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply (OA3 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA1 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA2 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply (OA3 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Admin Push?": {
+      "main": [
+        [
+          {
+            "node": "Route Push OA3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Push OA3?": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Admin (OA3 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Push Admin (OA1 Credential)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Push Admin (OA1 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Push Admin (OA3 Credential)": {
+      "main": [
+        [
+          {
+            "node": "Has Reply Payload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize paa-ai-brain": {
+      "main": [
+        [
+          {
+            "node": "Has reply?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Shadow Inbox Payload (AI Toggle)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is LINE Platform?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has reply?": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Should notify admin takeover?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Reply Payload1": {
+      "main": [
+        [
+          {
+            "node": "Has Customer Reply Payload?1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Should notify admin after reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Reply Route OA1 vs OA": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply AI (OA1)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route OA2 vs OA3 AI Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route OA2 vs OA3 AI Reply": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply AI (OA2)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Reply AI (OA3)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply AI (OA1)1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PAA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply AI (OA2)1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "P&A1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Reply AI (OA3)1": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call paa-ai-brain": {
+      "main": [
+        [
+          {
+            "node": "Normalize paa-ai-brain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has markAsReadToken?": {
+      "main": [
+        [
+          {
+            "node": "Mark Read OA Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read OA Route": {
+      "main": [
+        [
+          {
+            "node": "LINE Mark Read (OA1)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Read OA2 vs OA3 Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read OA2 vs OA3 Route": {
+      "main": [
+        [
+          {
+            "node": "LINE Mark Read (OA2)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE Mark Read (OA3)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Shadow Inbox Payload (AI Toggle)": {
+      "main": [
+        [
+          {
+            "node": "Unified Inbox Ingest (AI Toggle)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Inbox Ingest (AI Toggle)": {
+      "main": [
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Shadow Review Row v": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Append shadow_reviews v",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 12 Hours": {
+      "main": [
+        [
+          {
+            "node": "Call Follow-Up API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Call Auto-Release Stale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send To Brain?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Runtime Payload Before Brain1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Runtime Payload Before Brain1": {
+      "main": [
+        [
+          {
+            "node": "Brain Schema OK?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brain Schema OK?1": {
+      "main": [
+        [
+          {
+            "node": "Call paa-ai-brain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Webhook (GET/POST) /webhook/facebook1": {
+      "main": [
+        [
+          {
+            "node": "Facebook Verify?1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Facebook Verify?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is LINE Platform?1": {
+      "main": [
+        [
+          {
+            "node": "Is Shadow Review? v1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "a4f18b4d-3b17-42af-ac1a-308547ce3363",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50b9398667fecef5231b900714a0997b8e87996f58727cad5427170a677b0267"
+  },
+  "id": "yyoaVwZ5CmxA2oYG",
+  "tags": []
+}

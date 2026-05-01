@@ -1,0 +1,46 @@
+◇ injected env (19) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+--- START HARDENED REPAIR FSM VERIFICATION ---
+[SETUP] Dirty state applied: {
+  customer_name: 'tonhom2517',
+  preferred_date: 'วันเสาร์',
+  preferred_time: 'ช่วงเย็น',
+  area: 'สุขุมวิท 101',
+  building_type: 'คอนโด',
+  service_type: 'cleaning'
+}
+
+--- TURN 1: Fresh Repair Start ---
+[CASE_MANAGER] Fresh start detected pre-AI for "สวัสดีครับ จะให้มาซ่อมแอร์หน่อยครับ อาการคือเปิดแล้วไม่มีความเย็นครับ". Resetting state.
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[CASE_MANAGER] Pivot detected from general to repair. Resetting stale state.
+[CASE_MANAGER] Applying HIGH-PRIORITY deterministic repair triage. Next missing: last_cleaning_recency
+[RESULT T1] Intent: repair_request
+[RESULT T1] Merged Fields: { date: undefined, area: undefined, building: undefined }
+[RESULT T1] Reply: รับทราบครับ ข้อมูลนี้ใช้ประกอบการตรวจเช็กอาการได้ครับ รบกวนสอบถามว่าล้างแอร์ล่าสุดประมาณเมื่อไหร่ครับ?
+✅ PASS: Stale scheduling/location cleared (Hallucination Guard).
+✅ PASS: Correct sequence (Asked History on Turn 1).
+
+--- TURN 2: Site Details ---
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[CASE_MANAGER] Applying HIGH-PRIORITY deterministic repair triage. Next missing: last_cleaning_recency
+[RESULT T2] Captured Building: คอนโด
+[RESULT T2] Reply: รับทราบครับ ข้อมูลนี้ใช้ประกอบการตรวจเช็กอาการได้ครับ รบกวนสอบถามว่าล้างแอร์ล่าสุดประมาณเมื่อไหร่ครับ?
+✅ PASS: Persistent triage (Still asking for history).
+
+--- TURN 3: Premature Confirmation Guard ---
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[RESULT T3] Final Reply: รับทราบครับ เดี๋ยวผมส่งข้อมูลให้แอดมินเช็กคิวแล้วจะแจ้งยืนยันการเข้างานของช่างให้อีกครั้งนะประเมินหน้างานให้ในวันเสาร์นี้ช่วงเช้านะครับ
+✅ PASS: Confirmation sanitized.
+
+--- TURN 4: Farewell Guard ---
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[MODEL_ROUTER] Routing decision: text_default -> google/gemini-2.5-flash-lite
+[RESULT T4] Intent: repair_request
+[RESULT T4] Reply: รับทราบครับ คุณสมชาย ยืนยันวันเสาร์นี้ช่วงเช้านะครับ
+✅ PASS: Farewell respected.
+
+--- VERIFICATION COMPLETE ---
